@@ -11,5 +11,5 @@ rp6502_executable(hello
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.hlp
 )
 target_sources(hello PRIVATE
-    src/main.c
-)
+    src/main.s
+    src/TinyBasic.s)

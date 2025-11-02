@@ -1,5 +1,7 @@
 .export _init, _exit
 .export __STARTUP__ : absolute = 1
+.export ACIAout, ACIAin
+.import CV,WV   ; import Tiny Basic cold-start & warm-start vectors
 
 .include "rp6502.inc"
 
@@ -12,7 +14,7 @@ _init:
     txs
     cld
 
-; Print "Hello, world!" message
+; Print "Banner / Start-up Message" message
     ldx #0
 @loop:
     lda message,x
@@ -24,13 +26,37 @@ _init:
     inx
     bne @loop           ; Continue loop
 @done:
+    ; Jump to Tiny Basic start vector
+    jmp CV 
+    ; not-reached 
 
 ; Halts the 6502 by pulling RESB low
 _exit:
     lda #RIA_OP_EXIT
     sta RIA_OP
+    ; not-reached 
+
+; character out to simulated ACIA
+ACIAout:
+      BIT   RIA_READY
+      BPL   ACIAout           ; wait for FIFO
+      STA   RIA_TX            ; save byte to simulated ACIA
+      RTS
+
+; character in from simulated ACIA
+ACIAin:
+      BIT   RIA_READY
+      BVC   LAB_nobyw         ; branch if no byte waiting
+      LDA   RIA_RX            ; get byte from simulated ACIA
+      SEC                     ; flag byte received
+      RTS
+LAB_nobyw:
+      CLC                     ; flag no byte received
+;no_load:                      ; empty load vector for EhBASIC
+;no_save:                      ; empty save vector for EhBASIC
+      RTS
 
 .segment "RODATA"
 
 message:
-    .byte "Hello, world!", $0D, $0A, 0
+    .byte "Entering Tiny-Basic...", $0D, $0A, 0

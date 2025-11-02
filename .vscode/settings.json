@@ -23,4 +23,8 @@
             "statusBarVisibility": "hidden",
         }
     },
+    "files.associations": {
+        "rp6502.h": "c",
+        "stdio.h": "c"
+    },
 }
