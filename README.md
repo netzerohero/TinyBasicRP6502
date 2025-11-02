@@ -5,7 +5,7 @@ This is my (currently unworking) port of Tom Pittman's TinyBasic to the RP6502.
 Initial code here was originally targetted to the KIM-1.
 
 TinyBasic (and the origins of Dr. Dobb's Journal - DDJ) are important milestones in computer history and are in contrast with the recent (Sept-2025) open-source release of Microsoft's Basic whose origins were around the same time as Tiny Basic as well as DDJ.
-My initial exposure to Tiny-Basic was in the late 1970's. I bought a copy of TinyBasic on cassette-tape along with Pittman's manuals after building my own [Netronics ELF II] (https://carleton.ca/scs/vintage-computing/item/vin17/) RCA-1802 system and its 4K static-RAM board.  I still own them...
+My initial exposure to Tiny-Basic was in the late 1970's. I bought a copy of TinyBasic on cassette-tape along with Pittman's manuals after building my own [Netronics ELF II](https://carleton.ca/scs/vintage-computing/item/vin17/) RCA-1802 system and its 4K static-RAM board.  I still own them...
 
 Internally, TinyBasic (TB) runs its own intermediate-language byte-code interpretter (TBIL) of the TinyBasic language. Porting to different CPUs involved re-using the TBIL program, only have to port the native Machine-Language (ML) code to the varity of CPUs that ran TinyBasic.
 
