@@ -40,8 +40,8 @@ START
 
 CV       JMP      COLD_S            ; Cold start vector
 WV       JMP      WARM_S            ; Warm start vector
-IN_V     JMP      GETCH             ; Input routine address. Change JMP to JSR for echo.
-;IN_V    JSR      GETCH             ; Input routine address.
+;IN_V    JMP      GETCH             ; Input routine address. Change JMP to JSR for echo.
+IN_V     JSR      GETCH             ; Input routine address.
 OUT_V    JMP      OUTCH             ; Output routine address.
 BV       JMP      KIMBT             ; Begin break routine
 

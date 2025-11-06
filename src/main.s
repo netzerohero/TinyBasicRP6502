@@ -37,27 +37,38 @@ _exit:
     ; not-reached 
 
 ; character out to simulated ACIA
+; Send a character to the ACIA
 ACIAout:
-      BIT   RIA_READY
-      BPL   ACIAout           ; wait for FIFO
-      STA   RIA_TX            ; save byte to simulated ACIA
-      RTS
+; First filter characters before sending to ACIA
+    sta $FE                   ; Save the character to be printed
+    cmp #$FF                  ; Check for a bunch of characters
+    BEQ EXSC                  ; that we don't want to print to
+    cmp #$00                  ; the terminal and discard them to
+    beq EXSC                  ; clean up the output
+    cmp #$91                  ;
+    beq EXSC                  ;
+    cmp #$93                  ;
+    beq EXSC                  ;
+    cmp #$80                  ;
+    beq EXSC 
+GETSTS:
+    BIT   RIA_READY
+    BPL   GETSTS              ; wait for FIFO
+    lda   $FE                 ; Restore the character
+    STA   RIA_TX              ; save byte to simulated ACIA - SEND CHARACTER
+EXSC:
+    rts                       ; Return
+
+
 
 ; character in from simulated ACIA
 ACIAin:
       BIT   RIA_READY
-;     BVC   LAB_nobyw         ; branch if no byte waiting
       BVC   ACIAin            ; loop until a valid key-press char-byte is rcvd
       LDA   RIA_RX            ; get char-byte from simulated ACIA
-;      consider masking hi-bit to ensure a valid-ASCII char
-      and #%01111111          ; Clear high bit to be valid ASCII
-;     SEC                     ; flag byte received - this was an EhBASIC requirement; not needed for TinyBasic
+                      ;consider masking hi-bit to ensure a valid-ASCII char
+;     and #%01111111          ; Clear high bit to be valid ASCII
       RTS
-;LAB_nobyw:
-;      CLC                     ; flag no byte received
-;no_load:                      ; empty load vector for EhBASIC
-;no_save:                      ; empty save vector for EhBASIC
-;      RTS
 
 .segment "RODATA"
 
