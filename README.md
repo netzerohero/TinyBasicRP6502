@@ -13,6 +13,9 @@ References:
 http://en.wikipedia.org/wiki/Tiny_BASIC
 http://www.ittybittycomputers.com/IttyBitty/TinyBasic/index.htm
 http://www.ittybittycomputers.com/IttyBitty/TinyBasic/TinyBasic.asm
+
+The elegance of Tiny-Basic's architecture allow the 1802-ELF and the 6502-KIM1 to share the same underlying TBIL. Credit to Hans Otten for the KIM-1 source-code origins of this port:
+
 http://retro.hansotten.nl/6502-sbc/kim-1-manuals-and-software/kim-1-software/tiny-basic
 
 

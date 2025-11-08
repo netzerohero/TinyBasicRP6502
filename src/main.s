@@ -1,7 +1,8 @@
-.export _init, _exit
-.export __STARTUP__ : absolute = 1
-.export ACIAout, ACIAin
-.import CV,WV   ; import Tiny Basic cold-start & warm-start vectors
+.export  _init, _exit
+.export  __STARTUP__ : absolute = 1
+;.export ACIAout, ACIAin
+.export  SNDCHR,  RCCHR 
+.import  CV,WV   ; import Tiny Basic cold-start & warm-start vectors
 
 .include "rp6502.inc"
 
@@ -26,8 +27,9 @@ _init:
     inx
     bne @loop           ; Continue loop
 @done:
-    ; Jump to Tiny Basic start vector
-    jmp CV 
+    ; Jump to Tiny Basic startup 
+;   jmp CV 
+    jmp FBLK 
     ; not-reached 
 
 ; Halts the 6502 by pulling RESB low
@@ -36,9 +38,84 @@ _exit:
     sta RIA_OP
     ; not-reached 
 
-; character out to simulated ACIA
-; Send a character to the ACIA
-ACIAout:
+
+;
+; Begin base system initialization - credit to: Bill O'Neill 
+;
+FBLK:
+         jsr CLRSC                  ; Go clear the screen
+         ldx #$00                   ; Offset for welcome message and prompt
+         jsr SNDMSG                 ; Go print it
+ST_LP:
+         jsr RCCHR                  ; Go get a character from the console
+         cmp #$43                   ; Check for 'C'
+         bne IS_WRM                 ; If not branch to next check
+;        jmp COLD_S                 ; Otherwise cold-start Tiny Basic
+         jmp CV                     ; Otherwise cold-start Tiny Basic
+IS_WRM:
+         cmp #$57                   ; Check for 'W'
+         bne PRMPT                  ; If not, branch to re-prompt them
+;        jmp WARM_S                 ; Otherwise warm-start Tiny Basic
+         jmp WV                     ; Otherwise warm-start Tiny Basic
+PRMPT:
+         LDX #$9C                   ; Offset of to c/w-boot prompt in message block
+         jsr SNDMSG                 ; Go print the prompt	 
+         jmp ST_LP                  ; Go get the response
+
+
+
+;
+; Begin BIOS subroutines - credit to: Bill O'Neill 
+;
+
+;
+; Clear the screen
+;
+CLRSC:
+         ldx #$19                   ; Load X - we're going to print 25 lines
+         lda #$0D                   ; CR
+         jsr SNDCHR                 ; Send a carriage return
+         lda #$0A                   ; LF
+CSLP:
+         jsr SNDCHR                 ; Send the line feed
+         dex                        ; One less to do
+         bne CSLP                   ; Go send another until we're done
+         rts                        ; Return
+
+;
+; Print a message.
+; This sub expects the message offset from MBLK in X.
+;
+SNDMSG:
+         lda MBLK,X                 ; Get a character from the message block
+         cmp #$00                   ; Look for end of message-string marker (0)
+         beq EXSM                   ; Finish up if it is
+         jsr SNDCHR                 ; Otherwise send the character
+         inx                        ; Increment the pointer
+         jmp SNDMSG                 ; Go get next character
+EXSM:    rts                        ; Return
+
+
+
+; Get a character from simulated ACIA / keyboard
+; Remove RTS at bottom to run into char-out to provide screen-echo;
+;  or: change JMP to JSR in jump-table for same echo effect.
+;
+RCCHR:
+;ACIAin:
+      BIT   RIA_READY
+      BVC   ACIAin            ; loop until a valid key-press char-byte is rcvd
+      LDA   RIA_RX            ; get char-byte from simulated ACIA
+                      ;consider masking hi-bit to ensure a valid-ASCII char
+;     and #%01111111          ; Clear high bit to be valid ASCII
+;
+      RTS ; remove-me for local-echo and run into char-out below...
+
+
+; Send a character out to simulated ACIA / screen-terminal
+;
+SNDCHR:
+;ACIAout:
 ; First filter characters before sending to ACIA
     sta $FE                   ; Save the character to be printed
     cmp #$FF                  ; Check for a bunch of characters
@@ -61,16 +138,20 @@ EXSC:
 
 
 
-; character in from simulated ACIA
-ACIAin:
-      BIT   RIA_READY
-      BVC   ACIAin            ; loop until a valid key-press char-byte is rcvd
-      LDA   RIA_RX            ; get char-byte from simulated ACIA
-                      ;consider masking hi-bit to ensure a valid-ASCII char
-;     and #%01111111          ; Clear high bit to be valid ASCII
-      RTS
-
 .segment "RODATA"
 
+;
+; The message blocks; must terminates with a 00.
+;
 message:
-    .byte "Entering Tiny-Basic...", $0D, $0A, 0
+:    .byte "Entering...", $0D, $0A, 0
+
+MBLK:
+         .byte  "TINY BASIC - Copyright 1977, Tom Pitman"
+         .byte  $0D, $0A, $0A
+         .byte  "Startup-initialization patterned after Bill O'Neill V0.2.2 6502-port,"
+         .byte  " as well as Jeff Tranter port of Bill's code."
+         .byte  $0D, $0A, $0A
+
+         .byte  "Tiny Basic Boot: (C)old / (W)arm ? "
+         .byte  $07, $00

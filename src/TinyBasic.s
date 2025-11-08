@@ -1,5 +1,19 @@
+; TinyBasic.s - based-on: Hans Otten's carefully 
+;               reconstructed version of the KIM-1 versions of:
+;
+; Tiny Basic by: Tom Pittmman
+;
+; reconstructed version of the KIM-1 versions of Tiny Basic
+; Hans Otten, December 2023 
+;
+; reference:
+; http://retro.hansotten.nl/6502-sbc/kim-1-manuals-and-software/kim-1-software/tiny-basic
+;
+; originally: TASM syntax
+
 .export CV, WV                 ; Export Tiny Basic start vectors
-.import ACIAout, ACIAin     ; import ACIA character I/O routines
+;.import ACIAout, ACIAin       ; import ACIA character I/O routines
+.import  SNDCHR,  RCCHR        ; import character I/O routines
 
 .include "rp6502.inc"
 
@@ -7,26 +21,28 @@
 ;         OUTCH    = $1EA0         ; KIM-1 character output routine
 ;         KTTY     = $1740         ; KIM-1 TTY port
 
-         GETCH    = ACIAin         ; RP6502 character input routine
-         OUTCH    = ACIAout        ; RP6502 character output routine
+;        GETCH    = ACIAin         ; RP6502 character input  routine - orig
+;        OUTCH    = ACIAout        ; RP6502 character output routine - orig
+         GETCH    = RCCHR          ; RP6502 character input  routine -TB
+         OUTCH    = SNDCHR         ; RP6502 character output routine -TB
          KTTY     = RIA_READY      ; RP6502 TTY port
 
-         FREERAM   = $2000          ; Start of free RAM for program storage
+         FREERAM   = $2000          ; Start of free RAM for program storage -fixme
 
          .feature labels_without_colons +  ; porting legacy assembly code 
 
 
 .segment "CODE"
-;         .org     $0100
+;         .org     $0100 -fixme 
 
 ;  BREAK TEST FOR KIM
 KIMBT    LDA      KTTY              ; LOOK AT TTY
          CLC                        ; C=O IF IDLE
          BMI      KIMX              ; IDLE
          LDA      KTTY              ; WAIT FOR END
-         BPL      *-3
-KLDY     JSR      *+3
-         LDA      #255              ; DELAY 2 RUBOUT TIMES
+         BPL      *-3               ; -fixme
+KLDY     JSR      *+3               ; -fixme
+         LDA      #255            ; DELAY 2 RUBOUT TIMES
          JSR      OUTCH
          SEC                        ; C=1 IF BREAK
 KIMX     RTS
@@ -35,12 +51,12 @@ KIMX     RTS
 ;
 ; Tiny Basic starts here
 ;
-;        .org     $0400             ; Start of Basic; was 0200
+;        .org     $0400             ; Start of Basic; was 0200 -fixme 
 START
 
 CV       JMP      COLD_S            ; Cold start vector
 WV       JMP      WARM_S            ; Warm start vector
-;IN_V    JMP      GETCH             ; Input routine address. Change JMP to JSR for echo.
+;IN_V    JMP      GETCH             ; Input routine address. Change JMP to JSR for char-echo.
 IN_V     JSR      GETCH             ; Input routine address.
 OUT_V    JMP      OUTCH             ; Output routine address.
 BV       JMP      KIMBT             ; Begin break routine
@@ -127,10 +143,10 @@ LBL002   .word  ILTBL                ; Address of IL program table
 ; Load start of free RAM into locations $20 and $21
 ; and initialize the address for end of free ram ($22 & $23)
 ;
-COLD_S   lda #<FREERAM              ; Load accumulator with $00
+COLD_S   lda #<FREERAM              ; Load accumulator with $00 -fixme
          sta $20                    ; Store $00 in $20
          sta $22                    ; Store $00 in $22
-         lda #>FREERAM              ; Load accumulator with $02
+         lda #>FREERAM              ; Load accumulator with $02 -fixme
          sta $21                    ; Store $02 in $21
          sta $23                    ; Store $02 in $23
 ;
