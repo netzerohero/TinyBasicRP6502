@@ -58,7 +58,7 @@ IS_WRM:
 ;        jmp WARM_S                 ; Otherwise warm-start Tiny Basic
          jmp WV                     ; Otherwise warm-start Tiny Basic
 PRMPT:
-         LDX #$9C                   ; Offset of to c/w-boot prompt in message block
+         LDX #$28                  ; Offset of to c/w-boot prompt in message block
          jsr SNDMSG                 ; Go print the prompt	 
          jmp ST_LP                  ; Go get the response
 
@@ -72,7 +72,7 @@ PRMPT:
 ; Clear the screen
 ;
 CLRSC:
-         ldx #$19                   ; Load X - we're going to print 25 lines
+         ldx #$05                  ; Load X - we're going to print 05 lines
          lda #$0D                   ; CR
          jsr SNDCHR                 ; Send a carriage return
          lda #$0A                   ; LF
@@ -104,7 +104,8 @@ EXSM:    rts                        ; Return
 RCCHR:
 ;ACIAin:
       BIT   RIA_READY
-      BVC   ACIAin            ; loop until a valid key-press char-byte is rcvd
+;     BVC   ACIAin            ; loop until a valid key-press char-byte is rcvd
+      BVC   RCCHR             ; loop until a valid key-press char-byte is rcvd
       LDA   RIA_RX            ; get char-byte from simulated ACIA
                       ;consider masking hi-bit to ensure a valid-ASCII char
 ;     and #%01111111          ; Clear high bit to be valid ASCII
@@ -144,14 +145,11 @@ EXSC:
 ; The message blocks; must terminates with a 00.
 ;
 message:
-:    .byte "Entering...", $0D, $0A, 0
+         .byte  $0C ; Formfeed - clear the screen
+         .byte "Entering...", $0D, $0A, 0
 
 MBLK:
-         .byte  "TINY BASIC - Copyright 1977, Tom Pitman"
-         .byte  $0D, $0A, $0A
-         .byte  "Startup-initialization patterned after Bill O'Neill V0.2.2 6502-port,"
-         .byte  " as well as Jeff Tranter port of Bill's code."
-         .byte  $0D, $0A, $0A
-
-         .byte  "Tiny Basic Boot: (C)old / (W)arm ? "
+         .byte  "TINY BASIC - Copyright 1977, Tom Pittman"
+         .byte  $0D, $0A
+         .byte  "Tiny Basic Boot: (C)old / (W)arm ?"
          .byte  $07, $00
