@@ -1,0 +1,160 @@
+; TroyPress.com: Modified Tiny BASIC IL Listing 
+; https://troypress.com/the-tiny-basic-interpretive-language-il-and-onions/
+; J. Alan Henning, is through Mastodon: @jalanhenning@dice.camp
+; Jeffery Alan Henning
+;
+;THE IL CONTROL SECTION
+START: INIT                ;INITIALIZE
+       NLINE               ;WRITE CRLF
+CO:    GETLINE             ;WRITE PROMPT AND GET LINE
+       TSTL   XEC          ;TEST FOR LINE NUMBER
+       INSERT              ;INSERT IT (MAY BE DELETE)
+       JMP    CO
+;
+;STATEMENT EXECUTOR
+XEC:   XINIT               ;INITIALIZE
+STMT:  TST     S1,'LET'    ;IS STATEMENT A LET
+       TST     S1A,'A('
+       CALL    EXPR
+       TST     SYN,')'
+       JMP     S1B
+S1A:   TSTV    SYN         ;YES, PLACE VAR ADDRESS ON AESTK
+S1B:   TST     SYN,'='     ;(THIS LINE ORIGINALLY OMITTED)
+       CALL    EXPR        ;PLACE EXPR VALUE ON AESTK
+       DONE    SYN         ;REPORT ERROR IF NOT NEXT
+       STORE               ;STORE RESULT
+       NXT     STMT        ;AND SEQUENCE TO NEXT
+S1:    TST     S3,'GO'     ;GOTO OR GOSUB?
+       TST     S2,'TO'     ;YES...TO, OR...SUB
+       CALL    EXPR        ;GET LABEL
+       DONE    SYN         ;ERROR IF CR NOT NEXT
+       XFER    STMT        ;SET UP AND JUMP
+S2:    TST     SYN,'SUB'   ;ERROR IF NO MATCH
+       CALL    EXPR        ;GET DESTINATION
+       DONE    SYN         ;ERROR IF CR NOT NEXT
+       SAV                 ;SAVE RETURN LINE
+       XFER    STMT        ;AND JUMP
+S3:    TST     S8,'PRINT'  ;PRINT
+S4:    TST     S7,'"'      ;TEST FOR QUOTE
+       PRS                 ;PRINT STRING
+S5:    TST     S6,','      ;IS THERE MORE?
+       SPC                 ;SPACE TO NEXT ZONE
+       JMP     S4          ;YES JUMP BACK
+S6:    DONE    SYN         ;ERROR IF CR NOT NEXT
+       NLINE
+       NXT     STMT
+S7:    CALL    EXPR
+       PRN                 ;PRINT IT
+       JMP     S5          ;IS THERE MORE?
+S8:    TST     S9,'IF'     ;IF STATEMENT
+       CALL    EXPR        ;GET EXPRESSION
+       CALL    RELOP       ;DETERMINE OPR AND PUT ON STK
+       CALL    EXPR        ;GET EXPRESSION
+       TST     SYN,'THEN'  ;TEST FOR THEN
+       CMPR    STMT        ;COMPARE -- PERFORMS NXT IF FALSE
+       JMP     STMT
+S9:    TST     S12,'INPUT' ;INPUT STATEMENT
+S10:   TSTV    SYN         ;YES, PLACE VAR ADDRESS ON AESTK
+       INNUM               ;MOVE NUMBER FROM TTY TO AESTK
+       STORE               ;STORE IT
+       TST     S11,','     ;IS THERE MORE?
+       JMP     S10         ;YES
+S11:   DONE    SYN         ;MUST BE CR
+       NXT     STMT        ;SEQUENCE TO NEXT
+S12:   TST     S13,'RETURN';RETURN STATEMENT
+       DONE    SYN         ;MUST BE CR
+       RSTR                ;RESTORE LINE NUMBER OF CALL
+       NXT     STMT        ;SEQUENCE TO NEXT STATEMENT
+S13:   TST     S14,'END'
+       FIN     CO
+S14:   TST     S14A,'LIST' ;LIST COMMAND
+       DONE    SYN
+       LST
+       NXT     STMT
+S14A:  TST    S15,'LLIST'
+       DONE    SYN
+       LLST
+       NXT     STMT
+S15:   TST     S16,'RUN'   ;RUN COMMAND
+       DONE    SYN
+       VINIT               ;(NEW COMMAND TO CLEAR VARIABLES)
+       LIT     1;(NEED TO TRANSFER TO FIRST LINE OF PROGRAM)
+       XFER    STMT ;(XFER MODIFIED TO FIND NEXT HIGHER LINE # RATHER THAN PRODUCE AN ERROR)
+S16:   TST     SYN,'CLEAR' ;CLEAR COMMAND
+       DONE    SYN
+       JMP     START
+SYN:   ERR     CO          ;SYNTAX ERROR ***
+EXPR:  TST     E0,'-'
+       CALL    TERM        ;TEST FOR UNARY -.
+       NEG                 ;GET VALUE
+       JMP     E1          ;NEGATE IT
+E0:    TST     E1A,'+'     ;LOOK FOR MORE
+E1A:   CALL    TERM        ;TEST FOR UNARY +
+E1:    TST     E2,'+'      ;LEADING TERM
+       CALL    TERM
+       ADD
+       JMP     E1
+E2:    TST     E3,'-'      ;ANY MORE?
+       CALL    TERM        ;DIFFERENCE TERM
+       SUB
+       JMP     E1
+E3:    RTN                 ;ANY MORE?
+TERM:  CALL    FACT
+T0:    TST     T1,'*'
+       CALL    FACT        ;PRODUCT FACTOR.
+       MUL
+       JMP     T0
+T1:    TST     E3,'/'
+       CALL    FACT        ;QUOTIENT FACTOR.
+       DIV
+       JMP     T0
+FACT:  TST     F01,'RND(' ;(ADDED RND(X) FUNCTION WHERE X>1)
+       CALL    EXPR        ;***
+       TST     SYN,')'     ;***
+       RND           ;(ADDED RND COMMAND TO PUSH # ON AESTK)
+       RTN                 ;***
+F01:   TST     F0A,'ASC('' ;(ADDED ASC("A") FUNCTION)
+       TSTV    SYN         ;***
+       TST     SYN,'')'    ;***
+       LIT     166         ;(A = 231 IN MEMORY SCHEME)
+       SUB                 ;(REDUCE BACK TO 65 TO 90)
+       RTN                 ;***
+F0A:   TST     F0B,'A('    ;(ADDED 1 BUILT-IN ARRAY)
+       CALL    EXPR        ;***
+       TST     SYN,')'     ;***
+       IND               ;(CHANGED IND TO SUPPORT 0 TO 255)
+       RTN                 ;***
+F0B:   TSTV    F0          ;***
+       IND                 ;YES, GET THE VALUE.
+       RTN
+F0:    TSTN    F1          ;NUMBER, GET ITS VALUE.
+       RTN
+F1:    TST     F2,'('      ;PARENTHESIZED EXPR.
+       CALL    EXPR
+       TST     F2,')'
+       RTN
+F2:    ERR     CO          ;ERROR.
+RELOP: TST     R0,'='; 0, =; 1, <; 2, <=; 3, <>; 4, >; 5, >=
+       LIT     0           ;=
+       RTN
+R0:    TST     R4,'<'
+       TST     R1,'='
+       LIT     2           ;<=
+       RTN
+R1:    TST     R3,'>'
+       LIT     3           ;<>
+       RTN
+R3:    LIT     1           ;<
+       RTN
+R4:    TST     SYN,'>'
+       TST     R5,'='
+       LIT     5           ;>=
+       RTN
+R5:    TST     R6,'<'
+       LIT     3           ; ><
+       RTN                 ;(THIS LINE ORIGINALLY OMITTED)
+R6:    LIT     4           ; >
+       RTN
+EOF:                       ;(ENDS INPUT)
+
+
