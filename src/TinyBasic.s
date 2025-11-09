@@ -33,25 +33,25 @@
 
 
 .segment "CODE"
-;         .org     $0100 -fixme 
+;         .org     $0100 - Original KIM-1 BREAK-code location; at far-end of 6502's stack. -fixme
 
 ;  BREAK TEST FOR KIM
-KIMBT    LDA      KTTY              ; LOOK AT TTY
+KIMBT    LDA      KTTY              ; LOOK AT TTY  -noteB: replace w/ RTS to skip BREAK-test
          CLC                        ; C=O IF IDLE
          BMI      KIMX              ; IDLE
-         LDA      KTTY              ; WAIT FOR END
-         BPL      *-3               ; -fixme
-KLDY     JSR      *+3               ; -fixme
-         LDA      #255            ; DELAY 2 RUBOUT TIMES
+         LDA      KTTY              ; WAIT FOR END         -orig-KIM1: label: KL0
+         BPL      *-3               ; -noteB:              -orig-KIM1: BPL KL0
+KLDY     JSR      *+3               ; -noteB:              -orig-KIM1: JSR KIMDL
+         LDA      #255              ; DELAY 2 RUBOUT TIMES -orig-KIM1: label: KIMDL
          JSR      OUTCH
          SEC                        ; C=1 IF BREAK
 KIMX     RTS
 
-;        .res     235
+;        .res     235 ;above KIMBT BREAK-test occupies 20-bytes
 ;
 ; Tiny Basic starts here
 ;
-;        .org     $0400             ; Start of Basic; was 0200 -fixme 
+;        .org     $0200             ; Start of Basic on KIM-1 was 0200 -fixme 
 START
 
 CV       JMP      COLD_S            ; Cold start vector
