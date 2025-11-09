@@ -2,7 +2,7 @@
 
 This is my port of Tom Pittman's TINY BASIC to the [RP6502](https://picocomputer.github.io/).
 
-Code here was based-on Hans Otten's carefully reconstructed version from audio-tapes originally targetted to the [KIM-1] (https://en.wikipedia.org/wiki/KIM-1).
+Code here was based-on Hans Otten's carefully reconstructed version from audio-tapes originally targetted to the [KIM-1](https://en.wikipedia.org/wiki/KIM-1).
  
 TINY BASIC along with the inception of the People's Computer Company's (PCC) Dr. Dobb's Journal (DDJ) in the mid-1970s are important milestones in computer history. At the time, the BASIC language brought ease-of-use to the computer user. Hobbiests provided the creative energy driving computer HW & SW improvements. Differences between hobbiest approaches and those of the naccent computer HW/SW industry on code sharing and its distribution were being work through. The various forms of BASIC stood at the center of these different approaches. The alternative approach of code distribution was represented by MicroSoft's BASIC. These different approaches have infuenced the commercial and the communinty-driven licensing and distribution approaches of software development to the present day now 50-years hence.
 
@@ -13,9 +13,12 @@ Internally, TINY BASIC (TB) runs its own intermediate-language byte-code interpr
 
 ## References:
 
-http://en.wikipedia.org/wiki/Tiny_BASIC
-http://www.ittybittycomputers.com/IttyBitty/TinyBasic/index.htm
-http://www.ittybittycomputers.com/IttyBitty/TinyBasic/TinyBasic.asm
+- http://en.wikipedia.org/wiki/Tiny_BASIC 
+
+- http://www.ittybittycomputers.com/IttyBitty/TinyBasic/index.htm 
+
+- http://www.ittybittycomputers.com/IttyBitty/TinyBasic/TinyBasic.asm 
+
 
 The elegance of TINY BASICS's architecture allow the 1802-ELF and the 6502-KIM1 to share the same underlying TBIL. Credit to Hans Otten for the KIM-1 source-code origins of this port:
 
