@@ -68,7 +68,7 @@ BSC      .byte $5f                   ; Backspace code
 LSC      .byte $18                   ; Line cancel code
 PCC      .byte $80                   ; Pad character control
 TMC      .byte $00                   ; Tape mode control
-SSS      .byte $04                   ; Spare Stack size. (was $04 but documentation suggests $20)
+SSS      .byte $20                   ; Spare Stack size. (was $04 but per TINY BASIC User Manual is $20)
 
 ;
 ; Code fragment for 'PEEK' and 'POKE'
