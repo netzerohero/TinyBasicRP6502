@@ -19,7 +19,9 @@
 
 ;         GETCH    = $1E5A         ; KIM-1 character input routine
 ;         OUTCH    = $1EA0         ; KIM-1 character output routine
+;         FREERAM  = $0B00         ; Start of free RAM for program storage. must be page boundary, $0B00 low version for high version $2900
 ;         KTTY     = $1740         ; KIM-1 TTY port
+;         KIMBT    = $0100         ; Breaktest routine on low part of 6502's stack page 
 
 ;        GETCH    = ACIAin         ; RP6502 character input  routine - orig
 ;        OUTCH    = ACIAout        ; RP6502 character output routine - orig
@@ -27,7 +29,7 @@
          OUTCH    = SNDCHR         ; RP6502 character output routine -TB
          KTTY     = RIA_READY      ; RP6502 TTY port
 
-         FREERAM   = $2000          ; Start of free RAM for program storage -fixme
+         FREERAM   = $0B00          ; Start of free RAM for program storage -fixme
 
          .feature labels_without_colons +  ; porting legacy assembly code 
 
@@ -143,10 +145,10 @@ LBL002   .word  ILTBL                ; Address of IL program table
 ; Load start of free RAM into locations $20 and $21
 ; and initialize the address for end of free ram ($22 & $23)
 ;
-COLD_S   lda #<FREERAM              ; Load accumulator with $00 -fixme
+COLD_S   lda #<FREERAM              ; Load accumulator with low-byte of start-of-RAM (was $00) -fixme
          sta $20                    ; Store $00 in $20
          sta $22                    ; Store $00 in $22
-         lda #>FREERAM              ; Load accumulator with $02 -fixme
+         lda #>FREERAM              ; Load accumulator with hi-byte  of start-of-RAM (was $02) -fixme
          sta $21                    ; Store $02 in $21
          sta $23                    ; Store $02 in $23
 ;
