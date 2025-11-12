@@ -64,9 +64,9 @@ BV       JMP      KIMBT             ; Begin break routine
 ;
 ; Some codes
 ;
-BSC      .byte $5f                   ; Backspace code
-LSC      .byte $18                   ; Line cancel code
-PCC      .byte $80                   ; Pad character control
+BSC      .byte $08                   ; Backspace code (Originally $5F; change to BS=$08 for video-terminals)
+LSC      .byte $18                   ; Line cancel code (default = $18 = ctrl-X)
+PCC      .byte $00                   ; Pad character control (Originally $84; change to $00 for video-terminals)
 TMC      .byte $00                   ; Tape mode control
 SSS      .byte $20                   ; Spare Stack size. (was $04 but per TINY BASIC User Manual is $20)
 
