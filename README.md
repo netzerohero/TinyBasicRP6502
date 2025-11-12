@@ -31,6 +31,7 @@ Load TINY BASIC as you would any other RP6502 software package. [See the RP6052 
 
 ## Issues:
 
-Running TINY BASIC on the RP6502 is currently limited to the original 1-MHz; so 'SET PHI2 1000' on the RP6052 prior to TB startup.  I believe this limitation is tied to TINY BASIC's handling of BREAK-detection on the serial-line and exposes itself (say) when listing a large TB program. 
+Running TINY BASIC on the RP6502 is currently limited to the original 1-MHz; so 'SET PHI2 1000' on the RP6052 prior to TB startup.  I believe this limitation is tied to TINY BASIC's handling of BREAK-detection on the serial-line and exposes itself (say) when listing a large TB program. - RESOLVED 11-Nov-2025.
+
 
 
