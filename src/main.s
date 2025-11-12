@@ -59,7 +59,7 @@ IS_WRM:
          jmp WV                     ; Otherwise warm-start Tiny Basic
 PRMPT:
 ;        LDX #$28                   ; Offset of to c/w-boot prompt in message block
-         LDX #$3E
+         LDX #$43
          jsr SNDMSG                 ; Go print the prompt	 
          jmp ST_LP                  ; Go get the response
 
@@ -152,7 +152,7 @@ message:
 MBLK:
          .byte  "TINY BASIC - Copyright 1977, Tom Pittman"
          .byte  $0D, $0A
-         .byte  "RP6502 ver: 20251111"
+         .byte  "RP6502 ver: 20251111_2302"
          .byte  $0D, $0A
 TBQ: ;TinyBasic Boot Question
          .byte  "Tiny Basic Boot: (C)old / (W)arm ?"
