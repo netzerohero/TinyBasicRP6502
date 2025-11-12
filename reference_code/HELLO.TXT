@@ -8,6 +8,3 @@
 250 PRINT "LOOP ENDED...GOODBYE."
 999 END
 
-
-
-

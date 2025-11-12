@@ -27,9 +27,9 @@
 ;        OUTCH    = ACIAout        ; RP6502 character output routine - orig
          GETCH    = RCCHR          ; RP6502 character input  routine -TB
          OUTCH    = SNDCHR         ; RP6502 character output routine -TB
-         KTTY     = RIA_READY      ; RP6502 TTY port
+;        KTTY     = RIA_READY      ; RP6502 TTY port
 
-         FREERAM   = $0B00          ; Start of free RAM for program storage -fixme
+         FREERAM   = $0C00          ; Start of free RAM for program storage -fixme
 
          .feature labels_without_colons +  ; porting legacy assembly code 
 
@@ -37,17 +37,25 @@
 .segment "CODE"
 ;         .org     $0100 - Original KIM-1 BREAK-code location; at far-end of 6502's stack. -fixme
 
+
+;  Code to Skip Break Test 
+SKIPBT:  
+         clc                        ; set C=0 to flag TinyBasic no-break
+;        sec                        ; TEST: C=1, to flag TinyBasic to BREAK its activity (LIST, etc)
+         rts
+
+
 ;  BREAK TEST FOR KIM
-KIMBT    LDA      KTTY              ; LOOK AT TTY  -noteB: replace w/ RTS to skip BREAK-test
-         CLC                        ; C=O IF IDLE
-         BMI      KIMX              ; IDLE
-         LDA      KTTY              ; WAIT FOR END         -orig-KIM1: label: KL0
-         BPL      *-3               ; -noteB:              -orig-KIM1: BPL KL0
-KLDY     JSR      *+3               ; -noteB:              -orig-KIM1: JSR KIMDL
-         LDA      #255              ; DELAY 2 RUBOUT TIMES -orig-KIM1: label: KIMDL
-         JSR      OUTCH
-         SEC                        ; C=1 IF BREAK
-KIMX     RTS
+;KIMBT    LDA      KTTY              ; LOOK AT TTY  -noteB: replace w/ RTS to skip BREAK-test
+;         CLC                        ; C=O IF IDLE
+;         BMI      KIMX              ; IDLE
+;         LDA      KTTY              ; WAIT FOR END         -orig-KIM1: label: KL0
+;         BPL      *-3               ; -noteB:              -orig-KIM1: BPL KL0
+;KLDY     JSR      *+3               ; -noteB:              -orig-KIM1: JSR KIMDL
+;         LDA      #255              ; DELAY 2 RUBOUT TIMES -orig-KIM1: label: KIMDL
+;         JSR      OUTCH
+;         SEC                        ; C=1 IF BREAK
+;KIMX     RTS
 
 ;        .res     235 ;above KIMBT BREAK-test occupies 20-bytes
 ;
@@ -61,12 +69,13 @@ WV       JMP      WARM_S            ; Warm start vector
 ;IN_V    JMP      GETCH             ; Input routine address. Change JMP to JSR for char-echo.
 IN_V     JSR      GETCH             ; Input routine address.
 OUT_V    JMP      OUTCH             ; Output routine address.
-BV       JMP      KIMBT             ; Begin break routine
+;BV       JMP      KIMBT             ; Begin break routine
+BV       JMP      SKIPBT            ; Skip testing-for-break during LIST, etc.
 
 ;
 ; Some codes
 ;
-BSC      .byte $08                   ; Backspace code (Originally $5F; change to BS=$08 for video-terminals)
+BSC      .byte $08                   ; Backspace code (Originally $5F; change to BS=$08=ctrl-H for video-terminals)
 LSC      .byte $18                   ; Line cancel code (default = $18 = ctrl-X)
 PCC      .byte $00                   ; Pad character control (Originally $84; change to $00 for video-terminals)
 TMC      .byte $00                   ; Tape mode control
