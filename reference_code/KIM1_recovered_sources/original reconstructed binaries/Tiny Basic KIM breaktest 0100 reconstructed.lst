@@ -1,0 +1,33 @@
+0001   0000             
+0002   0000             ;  BREAK TEST FOR KIM
+0003   0000             ; 
+0004   0100             		.org $0100
+0005   0100             ;
+0006   0100             ; TASM syntax
+0007   0100             ;
+0008   0100             ; KIM defines 
+0009   0100             ;
+0010   0100             OUTCH    = $1EA0          ; KIM character output routine
+0011   0100             KTTY	 = $1740		  ; Break test if PB7 low at TTY input  
+0012   0100             		
+0013   0100 AD 40 17    KIMBT	lda	KTTY			;Look at TTY bit PB7
+0014   0103 18          		clc					;C=O IF IDLE
+0015   0104 30 0E       		bmi	KIMX			;IDLE
+0016   0106 AD 40 17    KLO		lda	KTTY			;WAIT FOR END
+0017   0109 10 FB       		bpl	KLO
+0018   010B 20 0E 01    KLDY	jsr	KIMDL
+0019   010E A9 FF       KIMDL	lda	#255			;DELAY 2 RUBOUT TIMES
+0020   0110 20 A0 1E    		jsr	OUTCH
+0021   0113 38          		sec					; C=1 IF BREAK
+0022   0114 60          KIMX	rts
+0023   0115             
+0024   0115             	.end
+
+
+Label        Value      Label        Value      Label        Value
+------------------      ------------------      ------------------
+KTTY          1740      KIMBT         0100      KLO           0106      
+KLDY          010B      KIMDL         010E      KIMX          0114      
+OUTCH         1EA0      
+
+tasm: Number of errors = 0

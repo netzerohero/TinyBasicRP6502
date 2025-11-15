@@ -1,0 +1,1329 @@
+0001   0000             ;
+0002   0000             ; Tiny Basic Tom Pittmman
+0003   0000             ;
+0004   0000             ; reconstructed version of the KIM-1 versions from tape Hans Oten
+0005   0000             ; delivers byte for byte equal version of binary 0200- or 2000-
+0006   0000             ; KIM breaktest included, removed from $0100 to end of program
+0007   0000             ; - Prompt changed to '>'
+0008   0000             ; - backspace is $08
+0009   0000             ; - paddding removed
+0010   0000             ;
+0011   0000             ; Hans Otten, December 2023 
+0012   0000             ;
+0013   0000             ; TASM syntax
+0014   0000             ;
+0015   0000             ; KIM defines 
+0016   0000             ;
+0017   0000             GETCH    = $1E5A          ; KIM character input routine
+0018   0000             OUTCH    = $1EA0          ; KIM character output routine
+0019   0000             FREERAM  = $0B00          ; Start of free RAM for program storage. must be page boundary, $0B00 low version for high version $2900
+0020   0000             KTTY	 = $1740		  ; Break test if PB7 low at TTY input  
+0021   0000             KIMBT    = $0100		  ; Breaktest routine on low part of stack page 
+0022   0000             ;
+0023   0000             ; Tiny Basic starts here
+0024   0000             ;
+0025   0200                      .org     $0200             ; Start of Basic. KIM versions at $0200 and $2000 
+0026   0200             START
+0027   0200             
+0028   0200 4C 85 02    CV       JMP      COLD_S            ; Cold start vector
+0029   0203 4C BD 02    WV       JMP      WARM_S            ; Warm start vector
+0030   0206 4C 5A 1E    IN_V     JMP      GETCH             ; Input routine address. 
+0031   0209 4C A0 1E    OUT_V    JMP      OUTCH             ; Output routine address.
+0032   020C 4C 00 01    BV       JMP	  KIMBT   			; KIM-1 break routine
+0033   020F             
+0034   020F             ;
+0035   020F             ; Some codes
+0036   020F             ;
+0037   020F 5F          BSC      .byte $5F                   ; Backspace code was $5f
+0038   0210 18          LSC      .byte $18                   ; Line cancel code
+0039   0211 84          PCC      .byte $84                   ; Pad character control was DEFAULT 84 (pad enabled bit 7, 4 pad characters
+0040   0212 80          TMC      .byte $80                   ; Tape mode control
+0041   0213 20          SSS      .byte $20                   ; Spare Stack size. (was $04 but documentation suggests $20)
+0042   0214             
+0043   0214             ;
+0044   0214             ; Code fragment for 'PEEK' and 'POKE'
+0045   0214             ;
+0046   0214 86 C3       PEEK     STX $C3                   ; 'PEEK' - store X in $C3
+0047   0216 90 05                BCC LBL008                ; On carry clear goto LBL008
+0048   0218 86 C3                STX $C3                   ; 'POKE' - store X in $C3
+0049   021A 91 C2                STA ($C2),Y               ; Store A in location pointed to by $C3 (hi) and Y (lo)
+0050   021C 60                   RTS                       ; Return
+0051   021D B1 C2       LBL008   LDA ($C2),Y               ; Load A with value pointed to by $C3 (hi) and Y (lo)
+0052   021F A0 00                LDY #$00                  ; Reset Y
+0053   0221 60                   RTS                       ; Return
+0054   0222             
+0055   0222             ;
+0056   0222             ; The following table contains the addresses for the ML handlers for the IL opcodes.
+0057   0222             ;
+0058   0222 62 03       SRVT     .word  IL_BBR               ; ($40-$5F) Backward Branch Relative
+0059   0224 64 03                .word  IL_FBR               ; ($60-$7F) Forward Branch Relative
+0060   0226 D8 03                .word  IL__BC               ; ($80-$9F) String Match Branch
+0061   0228 05 04                .word  IL__BV               ; ($A0-$BF) Branch if not Variable
+0062   022A 33 04                .word  IL__BN               ; ($C0-$DF) Branch if not a Number
+0063   022C FD 03                .word  IL__BE               ; ($E0-$FF) Branch if not End of line
+0064   022E 9F 05                .word  IL__NO               ; ($08) No Opertion
+0065   0230 42 09                .word  IL__LB               ; ($09) Push Literal Byte onto Stack
+0066   0232 3F 09                .word  IL__LN               ; ($0A) Push Literal Number
+0067   0234 7A 05                .word  IL__DS               ; ($0B) Duplicate Top two bytes on Stack
+0068   0236 FC 06                .word  IL__SP               ; ($0C) Stack Pop
+0069   0238 95 05                .word  LBL097                ; ($0D) (Reserved)
+0070   023A 9F 05                .word  IL__NO               ; ($0E) (Reserved)
+0071   023C 9F 05                .word  IL__NO               ; ($0F) (Reserved)
+0072   023E BD 08                .word  IL__SB               ; ($10) Save Basic Pointer
+0073   0240 C1 08                .word  IL__RB               ; ($11) Restore Basic Pointer
+0074   0242 8A 08                .word  IL__FV               ; ($12) Fetch Variable
+0075   0244 9B 08                .word  IL__SV               ; ($13) Store Variable
+0076   0246 E9 08                .word  IL__GS               ; ($14) Save GOSUB line
+0077   0248 61 05                .word  IL__RS               ; ($15) Restore saved line
+0078   024A 51 05                .word  IL__GO               ; ($16) GOTO
+0079   024C 41 08                .word  IL__NE               ; ($17) Negate
+0080   024E 52 08                .word  IL__AD               ; ($18) Add
+0081   0250 4F 08                .word  IL__SU               ; ($19) Subtract
+0082   0252 62 08                .word  IL__MP               ; ($1A) Multiply
+0083   0254 E7 07                .word  IL__DV               ; ($1B) Divide
+0084   0256 CD 04                .word  IL__CP               ; ($1C) Compare
+0085   0258 06 05                .word  IL__NX               ; ($1D) Next BASIC statement
+0086   025A 9F 05                .word  IL__NO               ; ($1E) (Reserved)
+0087   025C 15 06                .word  IL__LS               ; ($1F) List the program
+0088   025E A7 05                .word  IL__PN               ; ($20) Print Number
+0089   0260 B7 04                .word  IL__PQ               ; ($21) Print BASIC string
+0090   0262 BF 04                .word  IL__PT               ; ($22) Print Tab
+0091   0264 83 06                .word  IL__NL               ; ($23) New Line
+0092   0266 A1 04                .word  IL__PC               ; ($24) Print Literal String
+0093   0268 9F 05                .word  IL__NO               ; ($25) (Reserved)
+0094   026A 9F 05                .word  IL__NO               ; ($26) (Reserved)
+0095   026C A8 06                .word  IL__GL               ; ($27) Get input Line
+0096   026E 4F 09                .word  ILRES1               ; ($28) (Seems to be reserved - No IL opcode calls this)
+0097   0270 4D 09                .word  ILRES2               ; ($29) (Seems to be reserved - No IL opcode calls this)
+0098   0272 07 07                .word  IL__IL               ; ($2A) Insert BASIC Line
+0099   0274 AA 02                .word  IL__MT               ; ($2B) Mark the BASIC program space Empty
+0100   0276 37 05                .word  IL__XQ               ; ($2C) Execute
+0101   0278 BD 02                .word  WARM_S               ; ($2D) Stop (Warm Start)
+0102   027A 1B 09                .word  IL__US               ; ($2E) Machine Language Subroutine Call
+0103   027C B1 08                .word  IL__RT               ; ($2F) IL subroutine return
+0104   027E             
+0105   027E 20 41 54 20 ERRSTR   .byte " AT "                ; " AT " string used in error reporting.  Tom was right about this.
+0106   0282 80                   .byte $80                   ; String terminator
+0107   0283                      
+0108   0283 70 09       LBL002   .word  ILTBL                ; Address of IL program table
+0109   0285             
+0110   0285             ;
+0111   0285             ; Begin Cold Start
+0112   0285             ;
+0113   0285             ; Load start of free RAM into locations $20 and $21
+0114   0285             ; and initialize the address for end of free ram ($22 & $23)
+0115   0285             ;
+0116   0285 A9 00       COLD_S   lda #FREERAM&$FF          ; low byte for start of RAM
+0117   0287 85 20       		 sta $20
+0118   0289 85 22                sta $22                    ; Store $00 in $22
+0119   028B A9 0B                lda #FREERAM/256           ; high byte fo start of RAM
+0120   028D 85 21                sta $21                    ; Store $02 in $21
+0121   028F 85 23                sta $23                    ; Store $02 in $23
+0122   0291             ;
+0123   0291             ;
+0124   0291             ; Begin test for free ram
+0125   0291             ;
+0126   0291             
+0127   0291 A0 01                ldy #$01                   ; Load register Y with $01
+0128   0293 B1 22       MEM_T    lda ($22),Y                ; Load accumulator With the contents of a byte of memory
+0129   0295 AA                   tax                        ; Save it to X
+0130   0296 49 FF                eor #$FF                   ; Next 4 instuctions test to see if this memory location
+0131   0298 91 22                sta ($22),Y                ; is ram by trying to write something new to it - new value
+0132   029A D1 22                cmp ($22),Y                ; gets created by XORing the old value with $FF - store the
+0133   029C 08                   php                        ; result of the test on the stack to look at later
+0134   029D 8A                   txa                        ; Retrieve the old memory value
+0135   029E 91 22                sta ($22),Y                ; Put it back where it came from
+0136   02A0 E6 22                inc $22                    ; Increment $22 (for next memory location)
+0137   02A2 D0 02                bne PULL                 ; Skip if we don't need to increment page
+0138   02A4 E6 23                inc $23                    ; Increment $23 (for next memory page)
+0139   02A6             PULL  
+0140   02A6 28                   plp                        ; Now look at the result of the memory test
+0141   02A7 F0 EA                beq MEM_T                  ; Go test the next memory location if the last one was ram
+0142   02A9             TOP
+0143   02A9 88                   dey                        ; If last memory location did not test as ram, decrement Y (should be $00 now)
+0144   02AA             
+0145   02AA D8          IL__MT   cld                        ; Make sure we're not in decimal mode
+0146   02AB A5 20                lda $20                    ; Load up the low-order by of the start of free ram
+0147   02AD 6D 13 02             adc SSS                    ; Add to the spare stack size
+0148   02B0 85 24                sta $24                    ; Store the result in $0024
+0149   02B2 98                   tya                        ; Retrieve Y
+0150   02B3 65 21                adc $21                    ; And add it to the high order byte of the start of free ram (this does not look right)
+0151   02B5 85 25                sta $25                    ; Store the result in $0025
+0152   02B7 98                   tya                        ; Retrieve Y again
+0153   02B8 91 20                sta ($20),Y                ; Store A in the first byte of program memory
+0154   02BA C8                   iny                        ; Increment Y
+0155   02BB 91 20                sta ($20),Y                ; Store A in the second byte of program memory
+0156   02BD             ;
+0157   02BD             ;Begin Warm Start
+0158   02BD             ;
+0159   02BD A5 22       WARM_S   lda $22
+0160   02BF 85 C6                sta $C6
+0161   02C1 85 26                sta $26
+0162   02C3 A5 23                lda $23
+0163   02C5 85 C7                sta $C7
+0164   02C7 85 27                sta $27
+0165   02C9 20 87 06             jsr P_NWLN                 ; Go print CR, LF and pad characters
+0166   02CC AD 83 02    LBL014   lda LBL002                 ; Load up the start of the IL Table 
+0167   02CF 85 2A                sta $2A                    ;
+0168   02D1 AD 84 02             lda LBL002+$01             ;
+0169   02D4 85 2B                sta $2B
+0170   02D6 A9 80                lda #$80
+0171   02D8 85 C1                sta $C1
+0172   02DA A9 30                lda #$30
+0173   02DC 85 C0                sta $C0
+0174   02DE A2 00                ldx #$00
+0175   02E0 86 BE                stx $BE
+0176   02E2 86 C2                stx $C2
+0177   02E4 CA                   dex
+0178   02E5 9A                   txs
+0179   02E6             
+0180   02E6             ;
+0181   02E6             ; IL execution loop
+0182   02E6             ;
+0183   02E6 D8          LBL006   cld                        ; Make sure we're in binary mode 
+0184   02E7 20 F9 04             jsr LBL004                 ; Go read a byte from the IL program table
+0185   02EA 20 F2 02             jsr LBL005                 ; Go decide what to do with it
+0186   02ED 4C E6 02             jmp LBL006                 ; Repeat
+0187   02F0             ;
+0188   02F0             ;
+0189   02F0             ;
+0190   02F0 02                   .byte $02                   ; No idea about this
+0191   02F1 53                   .byte $53                   ; No idea about this
+0192   02F2             ;
+0193   02F2             ;
+0194   02F2             ; Routine to service the TBIL Instructions
+0195   02F2             ;
+0196   02F2 C9 30       LBL005   cmp #$30                   ;
+0197   02F4 B0 7B                bcs LBL011                 ; If it's $30 or higher, it's a Branch or Jump - go handle it
+0198   02F6 C9 08                cmp #$08                   ; 
+0199   02F8 90 0C                bcc LBL007                 ; If it's less than $08 it's a stack exchange - go handle it
+0200   02FA 0A                   asl a                       ; Multiply the OP code by 2 
+0201   02FB AA                   tax                        ; Transfer it to X
+0202   02FC BD 1F 02    LBL022   lda SRVT-$03,X             ; Get the hi byte of the OP Code handling routine
+0203   02FF 48                   pha                        ; and save it on the stack
+0204   0300 BD 1E 02             lda SRVT-$04,X             ; Get the lo byte
+0205   0303 48                   pha                        ; and save it on the stack
+0206   0304 08                   php                        ; save the processor status too
+0207   0305 40                   rti                        ; now go execute the OP Code handling routine
+0208   0306             ;
+0209   0306             ;
+0210   0306             ; Routine to handle the stack exchange 
+0211   0306             ;
+0212   0306 65 C1       LBL007   adc $C1
+0213   0308 AA                   tax
+0214   0309 B1 C1                lda ($C1),Y
+0215   030B 48                   pha
+0216   030C B5 00                lda $00,X
+0217   030E 91 C1                sta ($C1),Y
+0218   0310 68                   pla
+0219   0311 95 00                sta $00,X
+0220   0313 60                   rts
+0221   0314             ;
+0222   0314             ;
+0223   0314             ;
+0224   0314 20 87 06    LBL015   jsr P_NWLN                 ; Go print CR, LF and pad characters
+0225   0317 A9 21                lda #$21                   ; '!' character
+0226   0319 20 09 02             jsr OUT_V                  ; Go print it
+0227   031C A5 2A                lda $2A                    ; Load the current TBIL pointer (lo) 
+0228   031E 38                   sec                        ; Set the carry flag
+0229   031F ED 83 02             sbc LBL002                 ; Subtract the TBIL table origin (lo)
+0230   0322 AA                   tax                        ; Move the difference to X
+0231   0323 A5 2B                lda $2B                    ; Load the current TBIL pointer (hi)
+0232   0325 ED 84 02             sbc LBL002+$01             ; Subtract the TBIL table origin (hi)
+0233   0328 20 A0 05             jsr LBL010
+0234   032B A5 BE                lda $BE
+0235   032D F0 12                beq LBL012
+0236   032F A9 7E                lda #ERRSTR &$FF           ; Get lo byte of error string address
+0237   0331 85 2A                sta $2A                    ; Put in $2A
+0238   0333 A9 02                lda #ERRSTR/256            ; Get hi byte of error string address
+0239   0335 85 2B                sta $2B                    ; Put in $2B
+0240   0337 20 A1 04             jsr IL__PC                 ; Go report an error has been detected
+0241   033A A6 28                ldx $28
+0242   033C A5 29                lda $29
+0243   033E 20 A0 05             jsr LBL010
+0244   0341 A9 07       LBL012   lda #$07                   ; ASCII Bell
+0245   0343 20 09 02             jsr OUT_V                  ; Go ring Bell
+0246   0346 20 87 06             jsr P_NWLN                 ; Go print CR, LF and pad characters
+0247   0349 A5 26       LBL060   lda $26
+0248   034B 85 C6                sta $C6
+0249   034D A5 27                lda $27
+0250   034F 85 C7                sta $C7
+0251   0351 4C CC 02             jmp LBL014
+0252   0354             ;
+0253   0354             ;
+0254   0354             ;
+0255   0354 A2 7C       LBL115   ldx #$7C
+0256   0356 E4 C1       LBL048   cpx $C1
+0257   0358 90 BA       LBL019   bcc LBL015
+0258   035A A6 C1                ldx $C1
+0259   035C E6 C1                inc $C1
+0260   035E E6 C1                inc $C1
+0261   0360 18                   clc
+0262   0361 60                   rts
+0263   0362             ;
+0264   0362             ;
+0265   0362             ;
+0266   0362 C6 BD       IL_BBR   dec $BD                    ; Entry point for TBIL Backward Branch Relative
+0267   0364 A5 BD       IL_FBR   lda $BD                    ; Entry point for TBIL Forward Branch Relative
+0268   0366 F0 AC                beq LBL015
+0269   0368 A5 BC       LBL017   lda $BC
+0270   036A 85 2A                sta $2A
+0271   036C A5 BD                lda $BD
+0272   036E 85 2B                sta $2B
+0273   0370 60                   rts
+0274   0371             ;
+0275   0371             ; Jump handling routine
+0276   0371             ;
+0277   0371 C9 40       LBL011   cmp #$40
+0278   0373 B0 43                bcs LBL016                 ; If it's not a Jump, go to branch handler
+0279   0375 48                   pha
+0280   0376 20 F9 04             jsr LBL004                 ; Go read a byte from the TBIL table
+0281   0379 6D 83 02             adc LBL002
+0282   037C 85 BC                sta $BC
+0283   037E 68                   pla
+0284   037F 48                   pha
+0285   0380 29 07                and #$07
+0286   0382 6D 84 02             adc LBL002+$01
+0287   0385 85 BD                sta $BD
+0288   0387 68                   pla
+0289   0388 29 08                and #$08
+0290   038A D0 DC                bne LBL017
+0291   038C A5 BC                lda $BC
+0292   038E A6 2A                ldx $2A
+0293   0390 85 2A                sta $2A
+0294   0392 86 BC                stx $BC
+0295   0394 A5 BD                lda $BD
+0296   0396 A6 2B                ldx $2B
+0297   0398 85 2B                sta $2B
+0298   039A 86 BD                stx $BD
+0299   039C A5 C6       LBL126   lda $C6
+0300   039E E9 01                sbc #$01
+0301   03A0 85 C6                sta $C6
+0302   03A2 B0 02                bcs LBL018
+0303   03A4 C6 C7                dec $C7
+0304   03A6 C5 24       LBL018   cmp $24
+0305   03A8 A5 C7                lda $C7
+0306   03AA E5 25                sbc $25
+0307   03AC 90 AA                bcc LBL019
+0308   03AE A5 BC                lda $BC
+0309   03B0 91 C6                sta ($C6),Y
+0310   03B2 C8                   iny
+0311   03B3 A5 BD                lda $BD
+0312   03B5 91 C6                sta ($C6),Y
+0313   03B7 60                   rts
+0314   03B8             ;
+0315   03B8             ;
+0316   03B8             ; Branch Handler
+0317   03B8             ;
+0318   03B8 48          LBL016   pha
+0319   03B9 4A                   lsr a
+0320   03BA 4A                   lsr a
+0321   03BB 4A                   lsr a
+0322   03BC 4A                   lsr a
+0323   03BD 29 0E                and #$0E
+0324   03BF AA                   tax
+0325   03C0 68                   pla
+0326   03C1 C9 60                cmp #$60
+0327   03C3 29 1F                and #$1F
+0328   03C5 B0 02                bcs LBL020
+0329   03C7 09 E0                ora #$E0
+0330   03C9 18          LBL020   clc
+0331   03CA F0 07                beq LBL021
+0332   03CC 65 2A                adc $2A
+0333   03CE 85 BC                sta $BC
+0334   03D0 98                   tya
+0335   03D1 65 2B                adc $2B
+0336   03D3 85 BD       LBL021   sta $BD
+0337   03D5 4C FC 02             jmp LBL022
+0338   03D8             ;
+0339   03D8             ;
+0340   03D8             ;
+0341   03D8 A5 2C       IL__BC   lda $2C                    ; Entry point for TBIL BC (String Match Branch)
+0342   03DA 85 B8                sta $B8
+0343   03DC A5 2D                lda $2D
+0344   03DE 85 B9                sta $B9
+0345   03E0 20 25 04    LBL025   jsr LBL023
+0346   03E3 20 14 04             jsr LBL024
+0347   03E6 51 2A                eor ($2A),Y
+0348   03E8 AA                   tax
+0349   03E9 20 F9 04             jsr LBL004                 ; Go read a byte from the TBIL table
+0350   03EC 8A                   txa
+0351   03ED F0 F1                beq LBL025
+0352   03EF 0A                   asl a
+0353   03F0 F0 12                beq LBL026
+0354   03F2 A5 B8                lda $B8
+0355   03F4 85 2C                sta $2C
+0356   03F6 A5 B9                lda $B9
+0357   03F8 85 2D                sta $2D
+0358   03FA 4C 64 03    LBL028   jmp IL_FBR
+0359   03FD 20 25 04    IL__BE   jsr LBL023                 ; Entry point for TBIL BE (Branch if not End of line)
+0360   0400 C9 0D                cmp #$0D
+0361   0402 D0 F6                bne LBL028
+0362   0404 60          LBL026   rts
+0363   0405             ;
+0364   0405             ;
+0365   0405             ;
+0366   0405 20 25 04    IL__BV   jsr LBL023                 ; Entry point for TBIL BV (Branch if not Variable)
+0367   0408 C9 5B                cmp #$5B
+0368   040A B0 EE                bcs LBL028
+0369   040C C9 41                cmp #$41
+0370   040E 90 EA                bcc LBL028
+0371   0410 0A                   asl a
+0372   0411 20 87 05             jsr LBL029
+0373   0414 A0 00       LBL024   ldy #$00
+0374   0416 B1 2C                lda ($2C),Y
+0375   0418 E6 2C                inc $2C
+0376   041A D0 02                bne LBL030
+0377   041C E6 2D                inc $2D
+0378   041E C9 0D       LBL030   cmp #$0D
+0379   0420 18                   clc
+0380   0421 60                   rts
+0381   0422             ;
+0382   0422             ;
+0383   0422             ;
+0384   0422 20 14 04    LBL031   jsr LBL024
+0385   0425 B1 2C       LBL023   lda ($2C),Y
+0386   0427 C9 20                cmp #$20
+0387   0429 F0 F7                beq LBL031
+0388   042B C9 3A                cmp #$3A
+0389   042D 18                   clc
+0390   042E 10 02                bpl LBL032
+0391   0430 C9 30                cmp #$30
+0392   0432 60          LBL032   rts
+0393   0433             ;
+0394   0433             ;
+0395   0433             ;
+0396   0433 20 25 04    IL__BN   jsr LBL023                 ; Entry point for TBIL BN (Branch if not a Number)
+0397   0436 90 C2                bcc LBL028
+0398   0438 84 BC                sty $BC
+0399   043A 84 BD                sty $BD
+0400   043C A5 BC       LBL033   lda $BC
+0401   043E A6 BD                ldx $BD
+0402   0440 06 BC                asl $BC
+0403   0442 26 BD                rol $BD
+0404   0444 06 BC                asl $BC
+0405   0446 26 BD                rol $BD
+0406   0448 18                   clc
+0407   0449 65 BC                adc $BC
+0408   044B 85 BC                sta $BC
+0409   044D 8A                   txa
+0410   044E 65 BD                adc $BD
+0411   0450 06 BC                asl $BC
+0412   0452 2A                   rol a
+0413   0453 85 BD                sta $BD
+0414   0455 20 14 04             jsr LBL024
+0415   0458 29 0F                and #$0F
+0416   045A 65 BC                adc $BC
+0417   045C 85 BC                sta $BC
+0418   045E 98                   tya
+0419   045F 65 BD                adc $BD
+0420   0461 85 BD                sta $BD
+0421   0463 20 25 04             jsr LBL023
+0422   0466 B0 D4                bcs LBL033
+0423   0468 4C 80 05             jmp LBL034
+0424   046B 20 FC 06    LBL061   jsr IL__SP
+0425   046E A5 BC                lda $BC
+0426   0470 05 BD                ora $BD
+0427   0472 F0 48                beq LBL036
+0428   0474 A5 20       LBL065   lda $20
+0429   0476 85 2C                sta $2C
+0430   0478 A5 21                lda $21
+0431   047A 85 2D                sta $2D
+0432   047C 20 6D 05    LBL040   jsr LBL037
+0433   047F F0 12                beq LBL038
+0434   0481 A5 28                lda $28
+0435   0483 C5 BC                cmp $BC
+0436   0485 A5 29                lda $29
+0437   0487 E5 BD                sbc $BD
+0438   0489 B0 08                bcs LBL038
+0439   048B 20 14 04    LBL039   jsr LBL024
+0440   048E D0 FB                bne LBL039
+0441   0490 4C 7C 04             jmp LBL040
+0442   0493 A5 28       LBL038   lda $28
+0443   0495 45 BC                eor $BC
+0444   0497 D0 04                bne LBL041
+0445   0499 A5 29                lda $29
+0446   049B 45 BD                eor $BD
+0447   049D 60          LBL041   rts
+0448   049E             ;
+0449   049E             ;
+0450   049E             ;
+0451   049E 20 A6 04    LBL043   jsr LBL042
+0452   04A1 20 F9 04    IL__PC   jsr LBL004                 ; Entry point for TBIL PC (print literal) - Go read a byte from the TBIL table
+0453   04A4 10 F8                bpl LBL043
+0454   04A6 E6 BF       LBL042   inc $BF
+0455   04A8 30 03                bmi LBL044
+0456   04AA 4C 09 02             jmp OUT_V                  ; Go print it
+0457   04AD C6 BF       LBL044   dec $BF
+0458   04AF 60          LBL045   rts
+0459   04B0             ;
+0460   04B0             ;
+0461   04B0             ;
+0462   04B0 C9 22       LBL046   cmp #$22
+0463   04B2 F0 FB                beq LBL045
+0464   04B4 20 A6 04             jsr LBL042
+0465   04B7 20 14 04    IL__PQ   jsr LBL024                 ; Entry point for TBIL PQ
+0466   04BA D0 F4                bne LBL046
+0467   04BC 4C 14 03    LBL036   jmp LBL015
+0468   04BF A9 20       IL__PT   lda #$20                   ; Entry point for TBIL PT
+0469   04C1 20 A6 04             jsr LBL042
+0470   04C4 A5 BF                lda $BF
+0471   04C6 29 87                and #$87
+0472   04C8 30 E5                bmi LBL045
+0473   04CA D0 F3                bne IL__PT
+0474   04CC 60                   rts
+0475   04CD             ;
+0476   04CD             ;
+0477   04CD             ;
+0478   04CD A2 7B       IL__CP   ldx #$7B
+0479   04CF 20 56 03             jsr LBL048
+0480   04D2 E6 C1                inc $C1
+0481   04D4 E6 C1                inc $C1
+0482   04D6 E6 C1                inc $C1
+0483   04D8 38                   sec
+0484   04D9 B5 03                lda $03,X
+0485   04DB F5 00                sbc $00,X
+0486   04DD 95 00                sta $00,X
+0487   04DF B5 04                lda $04,X
+0488   04E1 F5 01                sbc $01,X
+0489   04E3 50 04                bvc LBL052
+0490   04E5 49 80                eor #$80
+0491   04E7 09 01                ora #$01
+0492   04E9 30 0A       LBL052   bmi LBL053
+0493   04EB D0 04                bne LBL054
+0494   04ED 15 00                ora $00,X
+0495   04EF F0 02                beq LBL049
+0496   04F1 56 02       LBL054   lsr $02,X
+0497   04F3 56 02       LBL049   lsr $02,X
+0498   04F5 56 02       LBL053   lsr $02,X
+0499   04F7 90 0C                bcc LBL050
+0500   04F9 A0 00       LBL004   ldy #$00                   ; Read a byte from the TBIL Table
+0501   04FB B1 2A                lda ($2A),Y               ;
+0502   04FD E6 2A                inc $2A                    ; Increment TBIL Table pointer as required
+0503   04FF D0 02                bne LBL051                 ;
+0504   0501 E6 2B                inc $2B                    ;
+0505   0503 09 00       LBL051   ora #$00                   ; Check for $00 and set the 'Z' flag acordingly
+0506   0505 60          LBL050   rts                        ; Return
+0507   0506             ;
+0508   0506             ;
+0509   0506             ;
+0510   0506 A5 BE       IL__NX   lda $BE                    ; Entry point for TBIL NX
+0511   0508 F0 28                beq LBL055
+0512   050A 20 14 04    LBL056   jsr LBL024
+0513   050D D0 FB                bne LBL056
+0514   050F 20 6D 05             jsr LBL037
+0515   0512 F0 1B                beq LBL057
+0516   0514 20 4C 05    LBL062   jsr LBL058
+0517   0517 20 0C 02             jsr BV                     ; Test for break
+0518   051A B0 09                bcs LBL059
+0519   051C A5 C4                lda $C4
+0520   051E 85 2A                sta $2A
+0521   0520 A5 C5                lda $C5
+0522   0522 85 2B                sta $2B
+0523   0524 60                   rts
+0524   0525             ;
+0525   0525             ;
+0526   0525             ;
+0527   0525 AD 83 02    LBL059   lda LBL002
+0528   0528 85 2A                sta $2A
+0529   052A AD 84 02             lda LBL002+$01
+0530   052D 85 2B                sta $2B
+0531   052F 4C 14 03    LBL057   jmp LBL015
+0532   0532 85 BF       LBL055   sta $BF
+0533   0534 4C 49 03             jmp LBL060
+0534   0537 A5 20       IL__XQ   lda $20                    ; Entry point fro TBIL XQ
+0535   0539 85 2C                sta $2C
+0536   053B A5 21                lda $21
+0537   053D 85 2D                sta $2D
+0538   053F 20 6D 05             jsr LBL037
+0539   0542 F0 EB                beq LBL057
+0540   0544 A5 2A                lda $2A
+0541   0546 85 C4                sta $C4
+0542   0548 A5 2B                lda $2B
+0543   054A 85 C5                sta $C5
+0544   054C A9 01       LBL058   lda #$01
+0545   054E 85 BE                sta $BE
+0546   0550 60                   rts
+0547   0551             ;
+0548   0551             ;
+0549   0551             ;
+0550   0551 20 6B 04    IL__GO   jsr LBL061                 ; Entry point for TBIL GO
+0551   0554 F0 BE                beq LBL062
+0552   0556 A5 BC       LBL066   lda $BC
+0553   0558 85 28                sta $28
+0554   055A A5 BD                lda $BD
+0555   055C 85 29                sta $29
+0556   055E 4C 14 03             jmp LBL015
+0557   0561 20 FD 08    IL__RS   jsr LBL063                 ; Entry point for TBIL RS
+0558   0564 20 F4 08             jsr LBL0GG
+0559   0567 20 74 04             jsr LBL065
+0560   056A D0 EA                bne LBL066
+0561   056C 60                   rts
+0562   056D             ;
+0563   056D             ;
+0564   056D             ;
+0565   056D 20 14 04    LBL037   jsr LBL024
+0566   0570 85 28                sta $28
+0567   0572 20 14 04             jsr LBL024
+0568   0575 85 29                sta $29
+0569   0577 05 28                ora $28
+0570   0579 60                   rts
+0571   057A             ;
+0572   057A             ;
+0573   057A             ;
+0574   057A 20 FC 06    IL__DS   jsr IL__SP                 ; Entry point for TBIL DS
+0575   057D 20 80 05             jsr LBL034
+0576   0580 A5 BD       LBL034   lda $BD
+0577   0582 20 87 05    LBL131   jsr LBL029
+0578   0585 A5 BC                lda $BC
+0579   0587 A6 C1       LBL029   ldx $C1
+0580   0589 CA                   dex
+0581   058A 95 00                sta $00,X
+0582   058C 86 C1                stx $C1
+0583   058E E4 C0                cpx $C0
+0584   0590 D0 0D                bne IL__NO
+0585   0592 4C 14 03    LBL068   jmp LBL015
+0586   0595 A6 C1       LBL097   ldx $C1
+0587   0597 E0 80                cpx #$80
+0588   0599 10 F7                bpl LBL068
+0589   059B B5 00                lda $00,X
+0590   059D E6 C1                inc $C1
+0591   059F 60          IL__NO   rts                        ; Entry point for the TBIL NO
+0592   05A0             ;
+0593   05A0             ;
+0594   05A0             ;
+0595   05A0 85 BD       LBL010   sta $BD
+0596   05A2 86 BC                stx $BC
+0597   05A4 4C B8 05             jmp LBL069
+0598   05A7 A6 C1       IL__PN   ldx $C1                    ; Entry point for the TBIL PN
+0599   05A9 B5 01                lda $01,X
+0600   05AB 10 08                bpl LBL070
+0601   05AD 20 41 08             jsr IL__NE
+0602   05B0 A9 2D                lda #$2D
+0603   05B2 20 A6 04             jsr LBL042
+0604   05B5 20 FC 06    LBL070   jsr IL__SP
+0605   05B8 A9 1F       LBL069   lda #$1F
+0606   05BA 85 B8                sta $B8
+0607   05BC 85 BA                sta $BA
+0608   05BE A9 2A                lda #$2A
+0609   05C0 85 B9                sta $B9
+0610   05C2 85 BB                sta $BB
+0611   05C4 A6 BC                ldx $BC
+0612   05C6 A4 BD                ldy $BD
+0613   05C8 38                   sec
+0614   05C9 E6 B8       LBL072   inc $B8
+0615   05CB 8A                   txa
+0616   05CC E9 10                sbc #$10
+0617   05CE AA                   tax
+0618   05CF 98                   tya
+0619   05D0 E9 27                sbc #$27
+0620   05D2 A8                   tay
+0621   05D3 B0 F4                bcs LBL072
+0622   05D5 C6 B9       LBL073   dec $B9
+0623   05D7 8A                   txa
+0624   05D8 69 E8                adc #$E8
+0625   05DA AA                   tax
+0626   05DB 98                   tya
+0627   05DC 69 03                adc #$03
+0628   05DE A8                   tay
+0629   05DF 90 F4                bcc LBL073
+0630   05E1 8A                   txa
+0631   05E2 38          LBLe02   sec
+0632   05E3 E6 BA       LBLe03   inc $BA
+0633   05E5 E9 64       		 sbc #$64
+0634   05E7 B0 FA                bcs LBLe03
+0635   05E9 88                   dey
+0636   05EA 10 F6                bpl LBLe02
+0637   05EC C6 BB       LBL075   dec $BB
+0638   05EE 69 0A                adc #$0A
+0639   05F0 90 FA                bcc LBL075
+0640   05F2 09 30                ora #$30
+0641   05F4 85 BC                sta $BC
+0642   05F6 A9 20                lda #$20
+0643   05F8 85 BD                sta $BD
+0644   05FA A2 FB                ldx #$FB
+0645   05FC 86 C3       LBL199   stx $C3
+0646   05FE B5 BD                lda $BD,X
+0647   0600 05 BD                ora $BD
+0648   0602 C9 20                cmp #$20
+0649   0604 F0 09                beq LBL076
+0650   0606 A0 30                ldy #$30
+0651   0608 84 BD                sty $BD
+0652   060A 05 BD                ora $BD
+0653   060C 20 A6 04             jsr LBL042
+0654   060F A6 C3       LBL076   ldx $C3
+0655   0611 E8                   inx
+0656   0612 D0 E8                bne LBL199
+0657   0614 60                   rts
+0658   0615             ;
+0659   0615             ;
+0660   0615             ;
+0661   0615 A5 2D       IL__LS   lda $2D                    ; Entry point for TBIL LS
+0662   0617 48                   pha
+0663   0618 A5 2C                lda $2C
+0664   061A 48                   pha
+0665   061B A5 20                lda $20
+0666   061D 85 2C                sta $2C
+0667   061F A5 21                lda $21
+0668   0621 85 2D                sta $2D
+0669   0623 A5 24                lda $24
+0670   0625 A6 25                ldx $25
+0671   0627 20 5B 06             jsr LBL077
+0672   062A F0 03                beq LBL078
+0673   062C 20 5B 06             jsr LBL077
+0674   062F A5 2C       LBL078   lda $2C
+0675   0631 38                   sec
+0676   0632 E5 B6                sbc $B6
+0677   0634 A5 2D                lda $2D
+0678   0636 E5 B7                sbc $B7
+0679   0638 B0 42                bcs LBL079
+0680   063A 20 6D 05             jsr LBL037
+0681   063D F0 3D                beq LBL079
+0682   063F A6 28                ldx $28
+0683   0641 A5 29                lda $29
+0684   0643 20 A0 05             jsr LBL010
+0685   0646 A9 20                lda #$20
+0686   0648 20 A6 04    LBL080   jsr LBL042
+0687   064B 20 0C 02             jsr BV                     ; Test for break
+0688   064E B0 2C                bcs LBL079
+0689   0650 20 14 04             jsr LBL024
+0690   0653 D0 F3                bne LBL080
+0691   0655 20 83 06             jsr IL__NL
+0692   0658 4C 2F 06             jmp LBL078
+0693   065B 85 B6       LBL077   sta $B6
+0694   065D E6 B6                inc $B6
+0695   065F D0 01                bne LBL082
+0696   0661 E8                   inx
+0697   0662 86 B7       LBL082   stx $B7
+0698   0664 A4 C1                ldy $C1
+0699   0666 C0 80                cpy #$80
+0700   0668 F0 18                beq LBL083
+0701   066A 20 6B 04             jsr LBL061
+0702   066D A5 2C       LBL099   lda $2C
+0703   066F A6 2D                ldx $2D
+0704   0671 38                   sec
+0705   0672 E9 02                sbc #$02
+0706   0674 B0 01                bcs LBL084
+0707   0676 CA                   dex
+0708   0677 85 2C       LBL084   sta $2C
+0709   0679 4C 48 09             jmp LBL085
+0710   067C 68          LBL079   pla
+0711   067D 85 2C                sta $2C
+0712   067F 68                   pla
+0713   0680 85 2D                sta $2D
+0714   0682 60          LBL083   rts
+0715   0683 A5 BF       IL__NL   lda $BF                    ; Entry point for TBIL NL
+0716   0685 30 FB                bmi LBL083
+0717   0687             ;
+0718   0687             ;
+0719   0687             ; Routine to print a new line.  It handles CR, LF
+0720   0687             ; and adds pad characters to the ouput
+0721   0687             ;
+0722   0687 A9 0D       P_NWLN   lda #$0D                   ; Load up a CR
+0723   0689 20 09 02             jsr OUT_V                  ; Go print it
+0724   068C AD 11 02             lda PCC                    ; Load the pad character code
+0725   068F 29 7F                and #$7F                   ; Test to see - 
+0726   0691 85 BF                sta $BF                    ; how many pad characters to print
+0727   0693 F0 07                beq LBL086                 ; Skip if 0
+0728   0695 20 64 09    LBL088   jsr LBL087                 ; Go print pad character
+0729   0698 C6 BF                dec $BF                    ; One less
+0730   069A D0 F9                bne LBL088                 ; Loop until 0
+0731   069C A9 0A       LBL086   lda #$0A                   ; Load up a LF
+0732   069E 4C 61 09             jmp LBL089                 ; Go print it
+0733   06A1             ;
+0734   06A1             ;
+0735   06A1             ;
+0736   06A1 AC 12 02    LBL092   ldy TMC
+0737   06A4 84 BF       LBL091   sty $BF
+0738   06A6 B0 0B                bcs LBL090
+0739   06A8 A9 30       IL__GL   lda #$30                   ; Entry pont for TBIL GL
+0740   06AA 85 2C                sta $2C
+0741   06AC 85 C0                sta $C0
+0742   06AE 84 2D                sty $2D
+0743   06B0 20 80 05             jsr LBL034
+0744   06B3 45 80       LBL090   eor $80
+0745   06B5 85 80                sta $80
+0746   06B7 20 06 02             jsr IN_V
+0747   06BA A0 00                ldy #$00
+0748   06BC A6 C0                ldx $C0
+0749   06BE 29 7F                and #$7F
+0750   06C0 F0 F1                beq LBL090
+0751   06C2 C9 7F                cmp #$7F
+0752   06C4 F0 ED                beq LBL090
+0753   06C6 C9 13                cmp #$13
+0754   06C8 F0 DA                beq LBL091
+0755   06CA C9 0A                cmp #$0A
+0756   06CC F0 D3                beq LBL092
+0757   06CE CD 10 02             cmp LSC
+0758   06D1 F0 09                beq LBL093
+0759   06D3 CD 0F 02             cmp BSC
+0760   06D6 D0 0A                bne LBL094
+0761   06D8 E0 30                cpx #$30
+0762   06DA D0 16                bne LBL095
+0763   06DC A6 2C       LBL093   ldx $2C
+0764   06DE 84 BF                sty $BF
+0765   06E0 A9 0D                lda #$0D
+0766   06E2 E4 C1       LBL094   cpx $C1
+0767   06E4 30 08                bmi LBL096
+0768   06E6 A9 07                lda #$07
+0769   06E8 20 A6 04             jsr LBL042
+0770   06EB 4C B3 06             jmp LBL090
+0771   06EE 95 00       LBL096   sta $00,X
+0772   06F0 E8                   inx
+0773   06F1 E8                   inx
+0774   06F2 CA          LBL095   dex
+0775   06F3 86 C0                stx $C0
+0776   06F5 C9 0D                cmp #$0D
+0777   06F7 D0 BA                bne LBL090
+0778   06F9 20 83 06             jsr IL__NL
+0779   06FC 20 95 05    IL__SP   jsr LBL097                 ; Entry point for TBIL SP
+0780   06FF 85 BC                sta $BC
+0781   0701 20 95 05             jsr LBL097
+0782   0704 85 BD                sta $BD
+0783   0706 60                   rts
+0784   0707             ;
+0785   0707             ;
+0786   0707             ;
+0787   0707 20 D6 08    IL__IL   jsr LBL098                 ; Entry point for TBIL IL
+0788   070A 20 6B 04             jsr LBL061
+0789   070D 08                   php
+0790   070E 20 6D 06             jsr LBL099
+0791   0711 85 B8                sta $B8
+0792   0713 86 B9                stx $B9
+0793   0715 A5 BC                lda $BC
+0794   0717 85 B6                sta $B6
+0795   0719 A5 BD                lda $BD
+0796   071B 85 B7                sta $B7
+0797   071D A2 00                ldx #$00
+0798   071F 28                   plp
+0799   0720 D0 0B                bne LBL100
+0800   0722 20 6D 05             jsr LBL037
+0801   0725 CA                   dex
+0802   0726 CA                   dex
+0803   0727 CA          LBL101   dex
+0804   0728 20 14 04             jsr LBL024
+0805   072B D0 FA                bne LBL101
+0806   072D 84 28       LBL100   sty $28
+0807   072F 84 29                sty $29
+0808   0731 20 D6 08             jsr LBL098
+0809   0734 A9 0D                lda #$0D
+0810   0736 D1 2C                cmp ($2C),Y
+0811   0738 F0 11                beq LBL102
+0812   073A E8                   inx
+0813   073B E8                   inx
+0814   073C E8                   inx
+0815   073D E8          LBL103   inx
+0816   073E C8                   iny
+0817   073F D1 2C                cmp ($2C),Y
+0818   0741 D0 FA                bne LBL103
+0819   0743 A5 B6                lda $B6
+0820   0745 85 28                sta $28
+0821   0747 A5 B7                lda $B7
+0822   0749 85 29                sta $29
+0823   074B A5 B8       LBL102   lda $B8
+0824   074D 85 BC                sta $BC
+0825   074F A5 B9                lda $B9
+0826   0751 85 BD                sta $BD
+0827   0753 18                   clc
+0828   0754 A0 00                ldy #$00
+0829   0756 8A                   txa
+0830   0757 F0 6E                beq LBL104
+0831   0759 10 29                bpl LBL105
+0832   075B 65 2E                adc $2E
+0833   075D 85 B8                sta $B8
+0834   075F A5 2F                lda $2F
+0835   0761 E9 00                sbc #$00
+0836   0763 85 B9                sta $B9
+0837   0765 B1 2E       LBL109   lda ($2E),Y
+0838   0767 91 B8                sta ($B8),Y
+0839   0769 A6 2E                ldx $2E
+0840   076B E4 24                cpx $24
+0841   076D D0 06                bne LBL106
+0842   076F A5 2F                lda $2F
+0843   0771 C5 25                cmp $25
+0844   0773 F0 4A                beq LBL107
+0845   0775 E8          LBL106   inx
+0846   0776 86 2E                stx $2E
+0847   0778 D0 02                bne LBL108
+0848   077A E6 2F                inc $2F
+0849   077C E6 B8       LBL108   inc $B8
+0850   077E D0 E5                bne LBL109
+0851   0780 E6 B9                inc $B9
+0852   0782 D0 E1                bne LBL109
+0853   0784 65 24       LBL105   adc $24
+0854   0786 85 B8                sta $B8
+0855   0788 85 2E                sta $2E
+0856   078A 98                   tya
+0857   078B 65 25                adc $25
+0858   078D 85 B9                sta $B9
+0859   078F 85 2F                sta $2F
+0860   0791 A5 2E                lda $2E
+0861   0793 E5 C6                sbc $C6
+0862   0795 A5 2F                lda $2F
+0863   0797 E5 C7                sbc $C7
+0864   0799 90 05                bcc LBL110
+0865   079B C6 2A                dec $2A
+0866   079D 4C 14 03             jmp LBL015
+0867   07A0 B1 24       LBL110   lda ($24),Y
+0868   07A2 91 2E                sta ($2E),Y
+0869   07A4 A6 24                ldx $24
+0870   07A6 D0 02                bne LBL111
+0871   07A8 C6 25                dec $25
+0872   07AA C6 24       LBL111   dec $24
+0873   07AC A6 2E                ldx $2E
+0874   07AE D0 02                bne LBL112
+0875   07B0 C6 2F                dec $2F
+0876   07B2 CA          LBL112   dex
+0877   07B3 86 2E                stx $2E
+0878   07B5 E4 BC                cpx $BC
+0879   07B7 D0 E7                bne LBL110
+0880   07B9 A6 2F                ldx $2F
+0881   07BB E4 BD                cpx $BD
+0882   07BD D0 E1                bne LBL110
+0883   07BF A5 B8       LBL107   lda $B8
+0884   07C1 85 24                sta $24
+0885   07C3 A5 B9                lda $B9
+0886   07C5 85 25                sta $25
+0887   07C7 A5 28       LBL104   lda $28
+0888   07C9 05 29                ora $29
+0889   07CB F0 17                beq LBL113
+0890   07CD A5 28                lda $28
+0891   07CF 91 BC                sta ($BC),Y
+0892   07D1 C8                   iny
+0893   07D2 A5 29                lda $29
+0894   07D4 91 BC                sta ($BC),Y
+0895   07D6 C8          LBL114   iny
+0896   07D7 84 B6                sty $B6
+0897   07D9 20 14 04             jsr LBL024
+0898   07DC 08                   php
+0899   07DD A4 B6                ldy $B6
+0900   07DF 91 BC                sta ($BC),Y
+0901   07E1 28                   plp
+0902   07E2 D0 F2                bne LBL114
+0903   07E4 4C CC 02    LBL113   jmp LBL014
+0904   07E7 20 54 03    IL__DV   jsr LBL115
+0905   07EA B5 03                lda $03,X
+0906   07EC 29 80                and #$80
+0907   07EE F0 02                beq LBL116
+0908   07F0 A9 FF                lda #$FF
+0909   07F2 85 BC       LBL116   sta $BC
+0910   07F4 85 BD                sta $BD
+0911   07F6 48                   pha
+0912   07F7 75 02                adc $02,X
+0913   07F9 95 02                sta $02,X
+0914   07FB 68                   pla
+0915   07FC 48                   pha
+0916   07FD 75 03                adc $03,X
+0917   07FF 95 03                sta $03,X
+0918   0801 68                   pla
+0919   0802 55 01                eor $01,X
+0920   0804 85 BB                sta $BB
+0921   0806 10 03                bpl LBL117
+0922   0808 20 43 08             jsr LBL118
+0923   080B A0 11       LBL117   ldy #$11
+0924   080D B5 00                lda $00,X
+0925   080F 15 01                ora $01,X
+0926   0811 D0 03                bne LBL119
+0927   0813 4C 14 03             jmp LBL015
+0928   0816 38          LBL119   sec
+0929   0817 A5 BC                lda $BC
+0930   0819 F5 00                sbc $00,X
+0931   081B 48                   pha
+0932   081C A5 BD                lda $BD
+0933   081E F5 01                sbc $01,X
+0934   0820 48                   pha
+0935   0821 45 BD                eor $BD
+0936   0823 30 0A                bmi LBL120
+0937   0825 68                   pla
+0938   0826 85 BD                sta $BD
+0939   0828 68                   pla
+0940   0829 85 BC                sta $BC
+0941   082B 38                   sec
+0942   082C 4C 32 08             jmp LBL121
+0943   082F 68          LBL120   pla
+0944   0830 68                   pla
+0945   0831 18                   clc
+0946   0832 36 02       LBL121   rol $02,X
+0947   0834 36 03                rol $03,X
+0948   0836 26 BC                rol $BC
+0949   0838 26 BD                rol $BD
+0950   083A 88                   dey
+0951   083B D0 D9                bne LBL119
+0952   083D A5 BB                lda $BB
+0953   083F 10 0D                bpl LBL122
+0954   0841 A6 C1       IL__NE   ldx $C1                    ; Entry point for TBIL NE
+0955   0843 38          LBL118   sec
+0956   0844 98                   tya
+0957   0845 F5 00                sbc $00,X
+0958   0847 95 00                sta $00,X
+0959   0849 98                   tya
+0960   084A F5 01                sbc $01,X
+0961   084C 95 01                sta $01,X
+0962   084E 60          LBL122   rts
+0963   084F             ;
+0964   084F             ;
+0965   084F             ;
+0966   084F 20 41 08    IL__SU   jsr IL__NE                 ; Entry point for TBIL SU
+0967   0852 20 54 03    IL__AD   jsr LBL115                 ; Entry point for TBIL AD
+0968   0855 B5 00                lda $00,X
+0969   0857 75 02                adc $02,X
+0970   0859 95 02                sta $02,X
+0971   085B B5 01                lda $01,X
+0972   085D 75 03                adc $03,X
+0973   085F 95 03                sta $03,X
+0974   0861 60                   rts
+0975   0862             ;
+0976   0862             ;
+0977   0862             ;
+0978   0862 20 54 03    IL__MP   jsr LBL115                 ; Entry point for TBIL MP
+0979   0865 A0 10                ldy #$10
+0980   0867 B5 02                lda $02,X
+0981   0869 85 BC                sta $BC
+0982   086B B5 03                lda $03,X
+0983   086D 85 BD                sta $BD
+0984   086F 16 02       LBL124   asl $02,X
+0985   0871 36 03                rol $03,X
+0986   0873 26 BC                rol $BC
+0987   0875 26 BD                rol $BD
+0988   0877 90 0D                bcc LBL123
+0989   0879 18                   clc
+0990   087A B5 02                lda $02,X
+0991   087C 75 00                adc $00,X
+0992   087E 95 02                sta $02,X
+0993   0880 B5 03                lda $03,X
+0994   0882 75 01                adc $01,X
+0995   0884 95 03                sta $03,X
+0996   0886 88          LBL123   dey
+0997   0887 D0 E6                bne LBL124
+0998   0889 60                   rts
+0999   088A             ;
+1000   088A             ;
+1001   088A             ;
+1002   088A 20 95 05    IL__FV   jsr LBL097                 ; Entry point for TBIL FV
+1003   088D AA                   tax
+1004   088E B5 00                lda $00,X
+1005   0890 B4 01                ldy $01,X
+1006   0892 C6 C1                dec $C1
+1007   0894 A6 C1                ldx $C1
+1008   0896 94 00                sty $00,X
+1009   0898 4C 87 05             jmp LBL029
+1010   089B A2 7D       IL__SV   ldx #$7D                   ; Entry point for TBIL SV
+1011   089D 20 56 03             jsr LBL048
+1012   08A0 B5 01                lda $01,X
+1013   08A2 48                   pha
+1014   08A3 B5 00                lda $00,X
+1015   08A5 48                   pha
+1016   08A6 20 95 05             jsr LBL097
+1017   08A9 AA                   tax
+1018   08AA 68                   pla
+1019   08AB 95 00                sta $00,X
+1020   08AD 68                   pla
+1021   08AE 95 01                sta $01,X
+1022   08B0 60                   rts
+1023   08B1 20 FD 08    IL__RT   jsr LBL063
+1024   08B4 A5 BC                lda $BC
+1025   08B6 85 2A                sta $2A
+1026   08B8 A5 BD                lda $BD
+1027   08BA 85 2B                sta $2B
+1028   08BC 60                   rts
+1029   08BD             ;
+1030   08BD             ;
+1031   08BD             ;
+1032   08BD A2 2C       IL__SB   ldx #$2C                   ; Entry point for TBIL SB 
+1033   08BF D0 02                bne LBL125
+1034   08C1 A2 2E       IL__RB   ldx #$2E                   ; Entry point for TBIL RB
+1035   08C3 B5 00       LBL125   lda $00,X
+1036   08C5 C9 80                cmp #$80
+1037   08C7 B0 0D                bcs LBL098
+1038   08C9 B5 01                lda $01,X
+1039   08CB D0 09                bne LBL098
+1040   08CD A5 2C                lda $2C
+1041   08CF 85 2E                sta $2E
+1042   08D1 A5 2D                lda $2D
+1043   08D3 85 2F                sta $2F
+1044   08D5 60                   rts
+1045   08D6             ;
+1046   08D6             ;
+1047   08D6             ;
+1048   08D6 A5 2C       LBL098   lda $2C
+1049   08D8 A4 2E                ldy $2E
+1050   08DA 84 2C                sty $2C
+1051   08DC 85 2E                sta $2E
+1052   08DE A5 2D                lda $2D
+1053   08E0 A4 2F                ldy $2F
+1054   08E2 84 2D                sty $2D
+1055   08E4 85 2F                sta $2F
+1056   08E6 A0 00                ldy #$00
+1057   08E8 60                   rts
+1058   08E9             ;
+1059   08E9             ;
+1060   08E9             ;
+1061   08E9 A5 28       IL__GS   lda $28                    ; Entry point for TBIL GS
+1062   08EB 85 BC                sta $BC
+1063   08ED A5 29                lda $29
+1064   08EF 85 BD                sta $BD
+1065   08F1 20 9C 03             jsr LBL126
+1066   08F4 A5 C6       LBL0GG   lda $C6
+1067   08F6 85 26                sta $26
+1068   08F8 A5 C7                lda $C7
+1069   08FA 85 27       LBL064   sta $27
+1070   08FC 60          LBL129   rts
+1071   08FD             ;
+1072   08FD             ;
+1073   08FD             ;
+1074   08FD B1 C6       LBL063   lda ($C6),Y
+1075   08FF 85 BC                sta $BC
+1076   0901 20 08 09             jsr LBL127
+1077   0904 B1 C6                lda ($C6),Y
+1078   0906 85 BD                sta $BD
+1079   0908 E6 C6       LBL127   inc $C6
+1080   090A D0 02                bne LBL128
+1081   090C E6 C7                inc $C7
+1082   090E A5 22       LBL128   lda $22
+1083   0910 C5 C6                cmp $C6
+1084   0912 A5 23                lda $23
+1085   0914 E5 C7                sbc $C7
+1086   0916 B0 E4                bcs LBL129
+1087   0918 4C 14 03             jmp LBL015
+1088   091B 20 24 09    IL__US   jsr LBL130
+1089   091E 85 BC                sta $BC
+1090   0920 98                   tya
+1091   0921 4C 82 05             jmp LBL131
+1092   0924 20 FC 06    LBL130   jsr IL__SP
+1093   0927 A5 BC                lda $BC
+1094   0929 85 B6                sta $B6
+1095   092B 20 FC 06             jsr IL__SP
+1096   092E A5 BD                lda $BD
+1097   0930 85 B7                sta $B7
+1098   0932 A4 BC                ldy $BC
+1099   0934 20 FC 06             jsr IL__SP
+1100   0937 A6 B7                ldx $B7
+1101   0939 A5 B6                lda $B6
+1102   093B 18                   clc
+1103   093C 6C BC 00             jmp ($00BC)
+1104   093F 20 42 09    IL__LN   jsr IL__LB                 ; Entry point for TBIL LN
+1105   0942 20 F9 04    IL__LB   jsr LBL004                 ; Entry point for TBIL LB - Go read a byte from the IL table
+1106   0945 4C 87 05             jmp LBL029
+1107   0948 86 2D       LBL085   stx $2D
+1108   094A E0 00                cpx #$00
+1109   094C 60                   rts
+1110   094D             ;
+1111   094D             ;
+1112   094D             ;
+1113   094D A0 02       ILRES2   ldy #$02                   ; These two entry points are for code that
+1114   094F 84 BC       ILRES1   sty $BC                    ;  does not seem to get called.  Need more research.
+1115   0951 A0 0B                ldy #$0B
+1116   0953 84 BD                sty $BD
+1117   0955 A0 00                ldy #$00
+1118   0957 B1 BC                lda ($BC),Y
+1119   0959 C9 08                cmp #$08
+1120   095B D0 03                bne LBL133
+1121   095D 4C 68 03             jmp LBL017
+1122   0960 60          LBL133   rts
+1123   0961             ;
+1124   0961             ;
+1125   0961             ; Subroutine to decide which pad characters to print
+1126   0961             ;
+1127   0961 20 09 02    LBL089   jsr OUT_V                  ; Entry point with a character to print first
+1128   0964 A9 FF       LBL087   lda #$FF                   ; Normal entry point - Set pad to $FF !ho  patch TO 00
+1129   0966 2C 11 02             bit PCC                    ; Check if the pad flag is on
+1130   0969 30 02                bmi LBL134                 ; Skip it if not
+1131   096B A9 00                lda #$00                   ; set pad to $00
+1132   096D 4C 09 02    LBL134   jmp OUT_V                  ; Go print it
+1133   0970             
+1134   0970             
+1135   0970             ;
+1136   0970             ; TBIL program table
+1137   0970             ;
+1138   0970 24 3A 80 27 ILTBL    .byte $24, $3A, $80, $27, $10, $E1, $59, $C5, $2A, $56, $10, $11, $2C, $8B, $4C
+1138   0974 10 E1 59 C5 
+1138   0978 2A 56 10 11 
+1138   097C 2C 8B 4C 
+1139   097F 45 D4 A0 80          .byte $45, $D4, $A0, $80, $BD, $30, $BC, $E0, $13, $1D, $94, $47, $CF, $88, $54
+1139   0983 BD 30 BC E0 
+1139   0987 13 1D 94 47 
+1139   098B CF 88 54 
+1140   098E CF 30 BC E0          .byte $CF, $30, $BC, $E0, $10, $11, $16, $80, $53, $55, $C2, $30, $BC, $E0, $14
+1140   0992 10 11 16 80 
+1140   0996 53 55 C2 30 
+1140   099A BC E0 14 
+1141   099D 16 90 50 D2          .byte $16, $90, $50, $D2, $83, $49, $4E, $D4, $E5, $71, $88, $BB, $E1, $1D, $8F
+1141   09A1 83 49 4E D4 
+1141   09A5 E5 71 88 BB 
+1141   09A9 E1 1D 8F 
+1142   09AC A2 21 58 6F          .byte $A2, $21, $58, $6F, $83, $AC, $22, $55, $83, $BA, $24, $93, $E0, $23, $1D
+1142   09B0 83 AC 22 55 
+1142   09B4 83 BA 24 93 
+1142   09B8 E0 23 1D 
+1143   09BB 30 BC 20 48          .byte $30, $BC, $20, $48, $91, $49, $C6, $30, $BC, $31, $34, $30, $BC, $84, $54
+1143   09BF 91 49 C6 30 
+1143   09C3 BC 31 34 30 
+1143   09C7 BC 84 54 
+1144   09CA 48 45 CE 1C          .byte $48, $45, $CE, $1C, $1D, $38, $0D, $9A, $49, $4E, $50, $55, $D4, $A0, $10
+1144   09CE 1D 38 0D 9A 
+1144   09D2 49 4E 50 55 
+1144   09D6 D4 A0 10 
+1145   09D9 E7 24 3F 20          .byte $E7, $24, $3F, $20, $80, $27, $E1, $59, $81, $AC, $30, $BC, $13, $11, $82
+1145   09DD 80 27 E1 59 
+1145   09E1 81 AC 30 BC 
+1145   09E5 13 11 82 
+1146   09E8 AC 4D E0 1D          .byte $AC, $4D, $E0, $1D, $89, $52, $45, $54, $55, $52, $CE, $E0, $15, $1D, $85
+1146   09EC 89 52 45 54 
+1146   09F0 55 52 CE E0 
+1146   09F4 15 1D 85 
+1147   09F7 45 4E C4 E0          .byte $45, $4E, $C4, $E0, $2D, $98, $4C, $49, $53, $D4, $EC, $24, $00, $00, $00
+1147   09FB 2D 98 4C 49 
+1147   09FF 53 D4 EC 24 
+1147   0A03 00 00 00 
+1148   0A06 00 0A 80 1F          .byte $00, $0A, $80, $1F, $24, $93, $23, $1D, $30, $BC, $E1, $50, $80, $AC, $59
+1148   0A0A 24 93 23 1D 
+1148   0A0E 30 BC E1 50 
+1148   0A12 80 AC 59 
+1149   0A15 85 52 55 CE          .byte $85, $52, $55, $CE, $38, $0A, $86, $43, $4C, $45, $41, $D2, $2B, $84, $52
+1149   0A19 38 0A 86 43 
+1149   0A1D 4C 45 41 D2 
+1149   0A21 2B 84 52 
+1150   0A24 45 CD 1D A0          .byte $45, $CD, $1D, $A0, $80, $BD, $38, $14, $85, $AD, $30, $D3, $17, $64, $81
+1150   0A28 80 BD 38 14 
+1150   0A2C 85 AD 30 D3 
+1150   0A30 17 64 81 
+1151   0A33 AB 30 D3 85          .byte $AB, $30, $D3, $85, $AB, $30, $D3, $18, $5A, $85, $AD, $30, $D3, $19, $54
+1151   0A37 AB 30 D3 18 
+1151   0A3B 5A 85 AD 30 
+1151   0A3F D3 19 54 
+1152   0A42 2F 30 E2 85          .byte $2F, $30, $E2, $85, $AA, $30, $E2, $1A, $5A, $85, $AF, $30, $E2, $1B, $54
+1152   0A46 AA 30 E2 1A 
+1152   0A4A 5A 85 AF 30 
+1152   0A4E E2 1B 54 
+1153   0A51 2F 98 52 4E          .byte $2F, $98, $52, $4E, $C4, $0A, $80, $80, $12, $0A, $09, $29, $1A, $0A, $1A
+1153   0A55 C4 0A 80 80 
+1153   0A59 12 0A 09 29 
+1153   0A5D 1A 0A 1A 
+1154   0A60 85 18 13 09          .byte $85, $18, $13, $09, $80, $12, $01, $0B, $31, $30, $61, $72, $0B, $04, $02
+1154   0A64 80 12 01 0B 
+1154   0A68 31 30 61 72 
+1154   0A6C 0B 04 02 
+1155   0A6F 03 05 03 1B          .byte $03, $05, $03, $1B, $1A, $19, $0B, $09, $06, $0A, $00, $00, $1C, $17, $2F
+1155   0A73 1A 19 0B 09 
+1155   0A77 06 0A 00 00 
+1155   0A7B 1C 17 2F 
+1156   0A7E 8F 55 53 D2          .byte $8F, $55, $53, $D2, $80, $A8, $30, $BC, $31, $2A, $31, $2A, $80, $A9, $2E
+1156   0A82 80 A8 30 BC 
+1156   0A86 31 2A 31 2A 
+1156   0A8A 80 A9 2E 
+1157   0A8D 2F A2 12 2F          .byte $2F, $A2, $12, $2F, $C1, $2F, $80, $A8, $30, $BC, $80, $A9, $2F, $83, $AC
+1157   0A91 C1 2F 80 A8 
+1157   0A95 30 BC 80 A9 
+1157   0A99 2F 83 AC 
+1158   0A9C 38 BC 0B 2F          .byte $38, $BC, $0B, $2F, $80, $A8, $52, $2F, $84, $BD, $09, $02, $2F, $8E, $BC
+1158   0AA0 80 A8 52 2F 
+1158   0AA4 84 BD 09 02 
+1158   0AA8 2F 8E BC 
+1159   0AAB 84 BD 09 93          .byte $84, $BD, $09, $93, $2F, $84, $BE, $09, $05, $2F, $09, $91, $2F, $80, $BE
+1159   0AAF 2F 84 BE 09 
+1159   0AB3 05 2F 09 91 
+1159   0AB7 2F 80 BE 
+1160   0ABA 84 BD 09 06          .byte $84, $BD, $09, $06, $2F, $84, $BC, $09, $95, $2F, $09, $04, $2F
+1160   0ABE 2F 84 BC 09 
+1160   0AC2 95 2F 09 04 
+1160   0AC6 2F 
+1161   0AC7 00 00 00             .byte $00, $00, $00
+1162   0ACA             ; End of Tiny Basic
+1163   0ACA             
+1164   0ACA             ;
+1165   0ACA             ;  BREAK TEST FOR KIM
+1166   0ACA             ; 
+1167   0ACA             ;KIMBT	lda	KTTY			;Look at TTY bit PB7
+1168   0ACA             ;		clc					;C=O IF IDLE
+1169   0ACA             ;		bmi	KIMX			;IDLE
+1170   0ACA             ;		lda	KTTY			;WAIT FOR END
+1171   0ACA             ;		bpl	*-3
+1172   0ACA             ;KLDY	jsr	KIMDL
+1173   0ACA             ;KIMDL	lda	#255			;DELAY 2 RUBOUT TIMES
+1174   0ACA             ;		jsr	OUTCH
+1175   0ACA             ;		sec					; C=1 IF BREAK
+1176   0ACA             ;KIMX	rts
+1177   0ACA             ;
+1178   0ACA             ;  BREAK TEST FOR TIM
+1179   0ACA             ; 
+1180   0ACA             ;TIMBT    lda	#$01		; if TTY bit 1 then there is incoming character?
+1181   0ACA             ;		 bit 	MPB 
+1182   0ACA             ;		 clc
+1183   0ACA             ;    	 beq	TIMBT1		
+1184   0ACA             ;TIMBT2	 bit	MPB 		; wait till TTY bit PB0 is 0 
+1185   0ACA             ;		 bne 	TIMBT2
+1186   0ACA             ;		 sec
+1187   0ACA             ;TIMBT1	 rts		 
+1188   0ACA             
+1189   0ACA             
+1190   0ACA             .end
+
+
+Label        Value      Label        Value      Label        Value
+------------------      ------------------      ------------------
+BV            020C      BSC           020F      CV            0200      
+COLD_S        0285      ERRSTR        027E      FREERAM       0B00      
+GETCH         1E5A      IN_V          0206      IL__MT        02AA      
+IL_BBR        0362      IL_FBR        0364      IL__BC        03D8      
+IL__BE        03FD      IL__BV        0405      IL__BN        0433      
+IL__PC        04A1      IL__PQ        04B7      IL__PT        04BF      
+IL__CP        04CD      IL__NX        0506      IL__XQ        0537      
+IL__GO        0551      IL__RS        0561      IL__DS        057A      
+IL__NO        059F      IL__PN        05A7      IL__LS        0615      
+IL__NL        0683      IL__GL        06A8      IL__SP        06FC      
+IL__IL        0707      IL__DV        07E7      IL__NE        0841      
+IL__SU        084F      IL__AD        0852      IL__MP        0862      
+IL__FV        088A      IL__SV        089B      IL__RT        08B1      
+IL__SB        08BD      IL__RB        08C1      IL__GS        08E9      
+IL__US        091B      IL__LN        093F      IL__LB        0942      
+ILRES2        094D      ILRES1        094F      ILTBL         0970      
+KTTY          1740      KIMBT         0100      LSC           0210      
+LBL008        021D      LBL002        0283      LBL014        02CC      
+LBL006        02E6      LBL005        02F2      LBL022        02FC      
+LBL007        0306      LBL015        0314      LBL012        0341      
+LBL060        0349      LBL115        0354      LBL048        0356      
+LBL019        0358      LBL017        0368      LBL011        0371      
+LBL126        039C      LBL018        03A6      LBL016        03B8      
+LBL020        03C9      LBL021        03D3      LBL025        03E0      
+LBL028        03FA      LBL026        0404      LBL024        0414      
+LBL030        041E      LBL031        0422      LBL023        0425      
+LBL032        0432      LBL033        043C      LBL061        046B      
+LBL065        0474      LBL040        047C      LBL039        048B      
+LBL038        0493      LBL041        049D      LBL043        049E      
+LBL042        04A6      LBL044        04AD      LBL045        04AF      
+LBL046        04B0      LBL036        04BC      LBL052        04E9      
+LBL054        04F1      LBL049        04F3      LBL053        04F5      
+LBL004        04F9      LBL051        0503      LBL050        0505      
+LBL056        050A      LBL062        0514      LBL059        0525      
+LBL057        052F      LBL055        0532      LBL058        054C      
+LBL066        0556      LBL037        056D      LBL034        0580      
+LBL131        0582      LBL029        0587      LBL068        0592      
+LBL097        0595      LBL010        05A0      LBL070        05B5      
+LBL069        05B8      LBL072        05C9      LBL073        05D5      
+LBLe02        05E2      LBLe03        05E3      LBL075        05EC      
+LBL199        05FC      LBL076        060F      LBL078        062F      
+LBL080        0648      LBL077        065B      LBL082        0662      
+LBL099        066D      LBL084        0677      LBL079        067C      
+LBL083        0682      LBL088        0695      LBL086        069C      
+LBL092        06A1      LBL091        06A4      LBL090        06B3      
+LBL093        06DC      LBL094        06E2      LBL096        06EE      
+LBL095        06F2      LBL101        0727      LBL100        072D      
+LBL103        073D      LBL102        074B      LBL109        0765      
+LBL106        0775      LBL108        077C      LBL105        0784      
+LBL110        07A0      LBL111        07AA      LBL112        07B2      
+LBL107        07BF      LBL104        07C7      LBL114        07D6      
+LBL113        07E4      LBL116        07F2      LBL117        080B      
+LBL119        0816      LBL120        082F      LBL121        0832      
+LBL118        0843      LBL122        084E      LBL124        086F      
+LBL123        0886      LBL125        08C3      LBL098        08D6      
+LBL0GG        08F4      LBL064        08FA      LBL129        08FC      
+LBL063        08FD      LBL127        0908      LBL128        090E      
+LBL130        0924      LBL085        0948      LBL133        0960      
+LBL089        0961      LBL087        0964      LBL134        096D      
+MEM_T         0293      OUTCH         1EA0      OUT_V         0209      
+PCC           0211      PEEK          0214      PULL          02A6      
+P_NWLN        0687      START         0200      SSS           0213      
+SRVT          0222      TMC           0212      TOP           02A9      
+WV            0203      WARM_S        02BD      
+
+tasm: Number of errors = 0
