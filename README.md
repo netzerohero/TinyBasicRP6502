@@ -4,7 +4,8 @@ This is my port of Tom Pittman's TINY BASIC to the [RP6502](https://picocomputer
 
 Code here was based-on Hans Otten's carefully reconstructed version from audio-tapes originally targeted to the [KIM-1](https://en.wikipedia.org/wiki/KIM-1).
  
-TINY BASIC along with the inception of the People's Computer Company's (PCC) Dr. Dobb's Journal (DDJ) in the mid-1970s are important milestones in computer history. At the time, the BASIC language brought ease-of-use to the computer user. Hobbyists provided the creative energy driving computer HW & SW improvements. Differences between hobbyists approaches and those of the nascent computer HW/SW industry on code sharing and its distribution were being work through. The various forms of BASIC stood at the center of these different approaches. The alternative approach of code distribution was represented by MicroSoft's BASIC. These different approaches have infuenced the commercial and the communinty-driven licensing and distribution approaches of software development to the present day now 50-years hence.
+TINY BASIC along with the inception of the People's Computer Company's (PCC) Dr. Dobb's Journal (DDJ) in the mid-1970s are important milestones in computer history. At the time, the BASIC language brought ease-of-use to the computer user. Hobbyists provided the creative energy driving computer HW & SW improvements. Differences between hobbyist approaches and those of the nascent computer HW/SW industry on code sharing and its distribution were being worked through. The various forms of BASIC stood at the center of these different approaches. One one-side were the code-sharing hobbyists and their various BASICs, where Pittman's TINY BASIC was one that stood out.
+The alternative approach of code distribution was represented by MicroSoft's BASIC. These different approaches have infuenced the commercial and the communinty-driven licensing and distribution approaches of software development 50-years hence to the present day.
 
 My initial exposure to TINY BASIC was in the late 1970's. After building my own [Netronics ELF II](https://carleton.ca/scs/vintage-computing/item/vin17/) RCA-1802 system and its 4K static-RAM board, I bought a copy of TINY BASIC on cassette-tape along with Pittman's infuential and approachably instructive manuals. I still own them...
 
@@ -29,9 +30,14 @@ http://retro.hansotten.nl/6502-sbc/kim-1-manuals-and-software/kim-1-software/tin
 
 Load TINY BASIC as you would any other RP6502 software package. [See the RP6052 site](https://github.com/picocomputer/examples). Following the banner start-up message, select either 'C' or 'W' (in CAPS-ONLY) for a Cold or Warm TINY BASIC startup.  Enter your TINY BASIC program and enjoy yesterday's simplicity!
 
-## Issues:
+## Examples:
+See the 'Examples' directory.
 
-Running TINY BASIC on the RP6502 is currently limited to the original 1-MHz; so 'SET PHI2 1000' on the RP6052 prior to TB startup.  I believe this limitation is tied to TINY BASIC's handling of BREAK-detection on the serial-line and exposes itself (say) when listing a large TB program. - RESOLVED 11-Nov-2025.
+## Issues:
+15-Nov-2025: Port remains a work-in-progress. All 'Example' programs may not run correctly yet.
+
+RESOLVED 11-Nov-2025:
+Running TINY BASIC on the RP6502 is currently limited to the original 1-MHz; so 'SET PHI2 1000' on the RP6052 prior to TB startup.  I believe this limitation is tied to TINY BASIC's handling of BREAK-detection on the serial-line and exposes itself (say) when listing a large TB program.
 
 
 
