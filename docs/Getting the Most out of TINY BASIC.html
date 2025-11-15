@@ -1,0 +1,531 @@
+<html><head> 
+<title>Getting the Most out of TINY BASIC</title>
+</head>
+<body>
+
+<center>
+<h1>
+Getting the Most out of <font size="+2">TINY BASIC</font></h1></center>
+
+
+This part of the book is designed for users who have had some experience
+programming. If you are just getting started, read
+the first part again</a>, do all the exercises, and practice using <font size="-1">TINY
+BASIC</font> for a few weeks. Write your own programs. Get a book of games
+and try converting them to <font size="-1">TINY</font>. Only then will you
+be able to understand what I am about to say in the rest of this book.
+<p>TINY BASIC</font> was designed to be a small
+but powerful language for hobbyists. It allows the user to write and debug
+quite a variety of programs in a language more "natural" than hexadecimal
+absolute, and programs written in <font size="-1">TINY</font> are reasonably
+compact. Because the language is small, it is not as convenient for some
+applications as perhaps a larger <font size="-1">BASIC</font> might be, but
+the enterprising programmer will find that there is very little that cannot
+be done from <font size="-1">TINY</font> with only occasional recourse to
+machine language. This is, in fact. as it should be: the high level language
+provides the framework for the whole program, and the individual esoteric
+functions done in machine language fill in the gaps.
+<br>&nbsp;
+</p><h3>
+<a name="USR"></a>The USR Function</h3>
+Perhaps the least understood feature of <font size="-1">TINY BASIC</font>
+is the machine language subroutine call facility.
+<p>First, how do subroutines work? In 1802 machine language a subroutine
+may be called with the SEP instruction. This changes the Program Counter
+to a different address register, while keeping the return address in the
+original Program Counter register. This is rather limiting in the number
+of subroutines which may be called, so there are tricks to save the return
+addresses on a stack so that the address registers may be re--used. These
+tricks are described in the RCA reference manual for the 1802 (<font size="-1">MPM-201A</font>)
+and are not important to the discussion here.
+</p><p>When the subroutine has finished its operation it executes another SEP
+instruction to return control to the program that called it. Depending
+on what function the subroutine is to perform, data may be passed to the
+subroutine by the calling program in one or more of the CPU registers,
+or results may be passed back from the subroutine to the main program in
+the same way. If the subroutine requires more data than will fit in the
+registers then memory is used, and the registers contain either addresses
+or more data. In some cases the subroutine has no need to pass data back
+and forth, so the contents of the registers may be ignored.
+</p><p>If the main program and the subroutine are both written in <font size="-1">TINY
+BASIC</font> you simply use the GOSUB and RETURN commands to call and return
+from the subroutine. This is no problem. But suppose the main program is
+written in <font size="-1">TINY</font> and the subroutine is written in machine
+language? The GOSUB command in <font size="-1">TINY</font> is not implemented
+internally with a SEP instruction, so it cannot be used. This is rather
+the purpose of the USR function.
+</p><p>The USR function call may be written with up to three arguments. The
+first of these is always the address of the subroutine to be called. If
+you refer to USR(l2345) it is the same as if you had written a sequence
+of instructions to load decimal 12345 into address register R3, followed
+by SEP R3; The computer saves its return address in a register (you may
+assume it is in R5) and jumps to the subroutine at (decimal) address 12345
+with P=3.
+</p><p>So now we can get to the subroutine from a <font size="-1">TINY BASIC</font>
+program. Getting back is easy. The subroutine simply executes a SEP R5
+instruction, and <font size="-1">TINY BASIC</font> resumes from where it
+left off. For those of you which worry about such things, <font size="-1">TINY
+BASIC</font> does use the Standard Call and Return Technique described
+by RCA, so the return address is actually in R6. R5 actually points to
+another subroutine whose sole function is to copy the address out of R6
+into R3, and to pop a new address off the stack into R6. But this need
+not concern you unless your machine language routine also needs to call
+other subroutines.
+</p><p>If you want to pass data from <font size="-1">TINY</font> to the subroutine
+in the CPU registers, you may do that also. This is the purpose of the
+second and third arguments of the USR function call. If you write a second
+argument in the call, this is evaluated and placed in R8; if you write
+a third argument it goes into RA; the low byte of the last argument is
+also placed in the accumulator (the D register). If there are results from
+the subroutine's operation, they may be returned in RA.1 and the D register,
+and <font size="-1">TINY</font> will use them as the value of the function
+(D contains the low byte of the 16-bit result). Thus writing the <font size="-1">TINY
+BASIC</font> statement
+</p><blockquote><tt>LET P = USR ( 12345, 0, 13 )</tt></blockquote>
+is approximately equivalent to writing in machine language
+<blockquote><tt>LDI #30</tt>
+<br><tt>PHI R3</tt>
+<br><tt>LDI #39</tt>
+<br><tt>PLO R3</tt>
+<br><tt>LDI 00</tt>
+<br><tt>PHI R8</tt>
+<br><tt>PLO R8</tt>
+<br><tt>LDI p</tt>
+<br><tt>PLO RD</tt>
+<br><tt>LDI 13</tt>
+<br><tt>SEP R3</tt>
+<br><tt>STR RD</tt></blockquote>
+Now actually there are some disc, repancies. As I said, the program does
+not go back immediately. Also, <font size="-1">TINY</font> only works with
+16-bit numbers, though I did not show what happens to RA.1. If you have
+trouble understanding 1802 machine language, you will probably man t to
+work through <a href="http://www.ittybittycomputers.com/IttyBitty/ShortCor.htm">A SHORT COURSE IN PROGAMMING</a>,
+also available from Netronics.
+<p>It is important to realize that the three arguments in the USR function
+are expressions. That is, any valid combination of (decimal) numbers, variables,
+or function calls joined together by arithmetic operators can be used in
+any argument. The following is a perfectly valid statement In <font size="-1">TINY
+BASIC</font>:
+</p><blockquote><tt>13 P=P+0*USR(256+24,USR(256+20,47),13)</tt></blockquote>
+It happens that memory address 0114 is the machine language routine for
+the PEEK function, and 0118 (decimal 280) is the POKE routine. When this
+line is executed, the inner USR call occurs first, jumping to the PEEK
+subroutine to look at the contents of memory location 002F; this byte is
+returned as its value, which is passed immediately as the second argument
+of the outer call, which stores a carriage return at the memory location
+addressed by that byte. We are not interested in any result data from that
+store operation, so the result is multiplied by 0 (giving zero) and added
+to some variable (in this case P), which leaves that variable unchanged.
+We could also have written (in this case)
+<blockquote><tt>13 POKE PEEK (47), 13</tt></blockquote>
+What kinds of things can we use the USR function for? As we saw in the
+example above, we can use it to do the PEEK and POKE operations, though
+it is hardly worth the trouble. Until you get around to writing your own
+machine language subroutines, you can use it for certain types of input
+and output.
+<br>&nbsp;
+<h3>
+<a name="IO"></a>Input &amp; Output Via USR</h3>
+As we saw in the first part of this book, you can directly access the hardware
+Input and Output ports of your ELF II by the INP function and the OUT command
+in <font size="-1">TINY BASIC</font>. This allows you, for example, to look
+at the last character keyed in on the ASCII keyboard, if you have one connected.
+But it gives you you no way to wait for a new keyin, and it is no help
+at all if you have a serial terminal connected.
+<p>On the other hand, you can use the USR function to directly access the
+character input and output routines that <font size="-1">TINY</font> uses.
+but you need to be careful that the characters do not come faster than
+your <font size="-1">TINY BASIC</font> program can take them. The following
+program inputs characters, converts lower case letters to capitals, then
+outputs the results:
+</p><blockquote><tt>10 REM READ ONE CHARACTER</tt>
+<br><tt>20 A=USR(256+6)</tt>
+<br><tt>30 REMOVE PARITY FOR TESTING</tt>
+<br><tt>40 A=A-A/128*128</tt>
+<br><tt>50 REM IF L.C., MAKE CAPS</tt>
+<br><tt>60 IF A&gt;96 IF A&lt;123 THEN A=A-32</tt>
+<br><tt>70 REM OUTPUT IT</tt>
+<br><tt>80 A=USR(256+19,A,A)</tt>
+<br><tt>90 GO TO 10</tt></blockquote>
+Because of the timing limitations of direct character input, it may be
+preferable to use the buffered line input controlled by the INPUT statement
+of <font size="-1">TINY</font>. Obviously for input of numbers and expressions
+there is no question, but for arbitrary text input it is also useful, with
+a little help from the PEEK function. The only requirement is that the
+first non-blank characters be a number or (capital) letter. Then the command
+<blockquote><tt>300 INPUT X</tt></blockquote>
+where we do not care about the value in X, will read a line into the line
+buffer, affording the operator (that's you) the line editing facilities
+(backspace and cancel), and put what <font size="-1">TINY</font> thinks is
+the first number of the line into the variable X. Now, remembering that
+the line buffer is in 0030 to 0078 (approximately, the ending address varies
+with the length of the line), we can use the PEEK function to examine the
+characters at our leisure. To read the next line it is essential to convince
+the line scanner in <font size="-1">TINY</font> that it has reached the end
+of the input line. Location 002F normally contains the current pointer
+to the input line; if it points to a carriage return the next INPUT statement
+will read a new line, so all that is needed is to store a carriage return
+(decimal 13) in the buffer memory location pointed to by this address (see
+line 13 above).
+<p>In a similar fashion we can access the cassette routines to save some
+part of memory, or to reload it. The cassette save routine is at location
+2557 (decimal); the following command saves the contents of the TV display
+buffer (locations 0DB0-0F08) on cassette:
+</p><blockquote><tt>A=A+0*USR(2557,3848,3504)</tt></blockquote>
+Here the first argument is the address of the routine, the second argument
+is the ending memory address, and the third is the starting memory address.
+This will save the actual dots of the display, which can be reloaded into
+another program (like the sample routine in the Basic ELF II instruction
+manual) for display. You can also save any data areas you may have set
+up (more about these later). You should be aware, however, that the machine
+language routine does not put out the "TURN ON RECORD" message, and the
+cassette recorder must be turned on immediately when this command is executed
+(watch the Q light; it will come on when it starts to record the leader).
+<p>The cassette load routine was also not designed for this application,
+but it will work, if you understand what is going on. If the data loads
+correctly you will get error stop #556 (syntax error), but if there is
+a tape read error, no message results. I know it's backwards, but as I
+said, it was not designed for this; I only thought of it while writing
+this section. The address is 2554, and the following command will read
+a block from the cassette into a memory buffer whose address is in variable
+B:
+</p><blockquote><tt>IF USR(2554,1,B)*0=0 THEN PRINT "TAPE ERROR"</tt></blockquote>
+Notice that no ending address is specified in this call. That is because
+the routine used in <font size="-1">TINY</font> reads until an error occurs,
+or two consecutive bytes of zero are read. Sorry about that! All those
+pretty pictures on the screen you can save, but you cannot reload into
+memory in <font size="-1">TINY</font>, because they are mostly zeros (all
+the black space is zero). You can, however, save and reload a data block
+from some other part of memory (if it has no consecutive zeros; machine
+language code usually meets this requirement).
+<br>&nbsp;
+<h3>
+<a name="Strings"></a>Strings</h3>
+As we have seen, character input is not such a difficult proposition with
+a little help from the USR and PEEK functions. (Character output was always
+easy in the PRINT statement). What about storing and manipulating strings
+of characters?
+<p>If we are careful, we can fill up the beginning of the <font size="-1">TINY
+BASIC</font> program with long REM statements and use them to hold character
+strings (this allows them to be initialized when the program is typed in).
+For example:
+</p><blockquote><tt>2 REMTHIS 15 A 50-CHARACTER DATA STRING FOR USE IN TINY</tt>
+<br><tt>3 REM0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 5</tt>
+<br><tt>4 REM12345678901234567890123456789012345678901234567890</tt>
+<br><tt>5 REM...IT TAKES 56 BYTES IN MEMORY:&nbsp; 2 FOR THE LINE #,</tt>
+<br><tt>6 REM.....3 FOR THE "REM", AND ONE FOR THE TERMINAL CR.</tt></blockquote>
+If you insert one line in front to GOTO the first program line, then your
+program may run just a little bit faster and you do not need the letters
+REM at the beginning of each line (though you still need the line number
+and the carriage return). If you are careful, you can POKE the carriage
+returns out of all but the last line and the line numbers from all but
+the first line (replace them with data characters), and it will look like
+a single line to the interpreter. Under no circumstances should you use
+a carriage return (decimal 13) as a data character; if you do, none of
+the GOTOs, GOSUBs or RETURNs in your program will work.
+<p>Gee, you say, if it weren't for that last caveat, I could use the same
+technique for storing arrays of numbers.
+<br>&nbsp;
+</p><h3>
+<a name="Arrays"></a>Arrays</h3>
+So the question arises, can PEEK and POKE get around the fact that <font size="-1">TINY
+BASIC</font> does not have arrays? The answer is of course, yes. Obviously
+there is no memory left in your system after <font size="-1">TINY</font>
+has made its memory grab. The possibility that one of the numbers in the
+array might take on a value of 13 means you cannot use the program space.
+What else is there? Remember the memory bounds in 0020-0023. Once you have
+initialized <font size="-1">TINY</font> (with the Cold Start), you can put
+any memory limits you wish in here and restart with a warm start, and <font size="-1">TINY</font>
+will stay out of the rest of memory. Now you have room for array data,
+subroutines, or anything else.
+<p>You can let the variable A hold the starting address of an array and
+N the number of elements, and a bubble sort would look like this:
+</p><blockquote><tt>500 LET J=1</tt>
+<br><tt>510 LET K=0</tt>
+<br><tt>520 IF PEEK(A+J) &gt;= PEEK(A+J-1) GOTO 540</tt>
+<br><tt>525 K=PEEK(A+J)+256</tt>
+<br><tt>530 POKE A+J,PEEK(A+J-1)</tt>
+<br><tt>535 POKE A+J-1,K</tt>
+<br><tt>540 J=J-1</tt>
+<br><tt>550 IF J&lt;N THEN GOTO 520</tt>
+<br><tt>560 IF K&lt;&gt;0 GOTO 500</tt>
+<br><tt>570 END</tt></blockquote>
+Of course this is not the most efficient sort routine and it will be veerrry
+sloooow. But it is probably faster than writing one in machine language,
+even though the machine language version would execute much faster. There
+are better sorting algorithms which you can code into <font size="-1">TINY</font>;
+I did not use one of them because they are more complicated.
+<br>&nbsp;
+<h3>
+<a name="Stack"></a>The Stack</h3>
+A kind of sneaky place to store data is the GOSUB stack. There are two
+ways to do this without messing with the Warm Start. But first let us think
+about the rationale.
+<p>When you execute a GOSUB (or, more precisely, when <font size="-1">TINY</font>
+executes one), the line number of the GOSUB is saved on a stack which grows
+downward from the end of the user space. Each GOSUB makes the stack grow
+by two bytes, and each RETURN pops off the most recent saved address, to
+shrink the stack by two bytes. Incidentally, because the line number is
+saved and not the physical location in memory, you do not need to worry
+about making changes to your program in case of an error stop within a
+subroutine. Just don't remove the line that contains an unRETURNed subroutine,
+unless you are willing to put up with <font size="-1">TINY</font>'s complaint.
+</p><p>The average program seldom needs to nest subroutines (ie. calling subroutines
+from within subroutines) more than five or ten levels deep, and many computer
+systems are designed with a built-in limitation on the number of subroutines
+that may be nested. The 8008 CPU was limited to eight levels; the 6502
+is limited to about 120. Many BASIC interpreters specify some maximum.
+I tend to feel that stack space, like most other resources, obeys Parkinson's
+Law: the requirements will expand to exhaust the available resource. Accordingly,
+the <font size="-1">TINY BASIC</font> subroutine nest capacity is limited
+only by the amount of available memory. This is an important concept. If
+my program is small (the program and stack contend for the same space),
+I can execute hundreds or even thousands of GOSUBs before the stack fills
+up. If there are no corresponding RETURN statements, all that memory just
+sits there doing nothing.
+</p><p>If you read your User's Manual carefully, you will recall that memory
+locations 0026-0027 point to the top of the GOSUB stack. Actually they
+point to the next byte not yet used. The difference between that address
+and the end of memory (found in 0022-0023) is exactly the number of bytes
+in the stack. One greater than the value of the top-of-stack pointer is
+the address of the first byte in the stack.
+</p><p>If you know how many bytes of data space you need, the first thing you
+can do is execute half that many GOSUBs:
+</p><blockquote><tt>400 REM B IS THE NUMBER OF BYTES NEEDED</tt>
+<br><tt>410 LET B=B-2</tt>
+<br><tt>420 IF B&gt; -2 THEN GOSUB 410</tt>
+<br><tt>430 REM SIMPLE, ISN'T IT?</tt></blockquote>
+Be careful that you do not try to call this as a subroutine, because the
+return address will be buried under several hundred "420"s. If you ware
+to add the line,
+<blockquote><tt>440 RETURN</tt></blockquote>
+the entire stack would be emptled before you got back to the calling GOSUB.
+Remember also that if you execute an END command the stack is cleared,
+but an error stop or a break will not affect it. Before you start this
+program you should be sure the stack is clear by typing END; otherwise
+a few tines through the GOSUB loop and you will run out of memory.
+<p>If you are careful to limit it to the main program, you can grab bytes
+out of the stack as the need arises. Whether you allocate memory with one
+big grab, or a little at a time, you may use the PEEK and POKE operations
+to get at it.
+</p><p>The other way for using the stack for storing data is a little more
+prodigal of memory, but it runs faster. It also has the advantage of avoiding
+the POKE command, in case that still scares you. It works by effectively
+encoding the data in the return address line numbers themselves. The data
+is accessed, in true stack format: last in, first out. I used this technique
+successfully in implementing a recursive program in <font size="-1">TINY
+BASIC</font>.
+</p><p>This method works best with the computed GOTO techniques described later,
+but the following example will illustrate the principle: Assume that the
+variable Q may take on the values (-1, 0, +1), and it is desired to stack
+Q for later use. Where this requirement occurs, use a GOTO (not a GOSUB)
+to jump to the following subroutine:
+</p><blockquote><tt>3000 REM SAVE Q ON STACK</tt>
+<br><tt>3010 IF Q&lt;0 THEN GOTO 3100</tt>
+<br><tt>3020 IF Q&gt;0 THEN GOTO 3150</tt>
+<br><tt>3050 REM Q=0. SAVE IT.</tt>
+<br><tt>3060 GOSUB 3200</tt>
+<br><tt>3070 REM RECOVER Q</tt>
+<br><tt>3080 Q=0</tt>
+<br><tt>3090 GOTO 3220</tt>
+<br><tt>3100 REM Q&lt;0. SAVE IT.</tt>
+<br><tt>3110 GOSUB 3200</tt>
+<br><tt>3120 REM RECOVER Q</tt>
+<br><tt>3130 Q=-1</tt>
+<br><tt>3140 GOTO 3220</tt>
+<br><tt>3150 REM Q&gt;0. SAVE IT.</tt>
+<br><tt>3160 GOSUB 3200</tt>
+<br><tt>3170 REM RECOVER Q</tt>
+<br><tt>3180 Q=1</tt>
+<br><tt>3190 GOTO 3200</tt>
+<br><tt>3200 REM EXIT TO (SAVE) CALLER</tt>
+<br><tt>3210 GOTO . . .</tt>
+<br><tt>3220 REM EXIT TO (RECOVER) CALLER</tt>
+<br><tt>3230 GOTO . . .</tt></blockquote>
+When the main program wishes to save Q, it jumps to the entry (line 3000),
+which selects one of the three GOSUBs. These all converge on line 3200,
+which simply jumps back to the calling routine; the information in Q has
+been saved on the stack. To recover the saved value of Q it is necessary
+only to execute a RETURN. Depending on which GOSUB was previously selected,
+execution returns to the next line, which sets Q to the appropriate value,
+then jumps back to the calling routine (with a GOTO again!). Q may be resaved
+as many times as you like (and as you have memory for) without recovering
+the previous values. When you finally do execute a RETURN you get the most
+recently saved value of Q.
+<p>For larger numbers, the GOSUBs may be nested, each saving one bit (or
+digit) of the number. The following routine saves arbitrary numbers, but
+in the worst case requires 36 bytes of stack for each number (for numbers
+less than -16383):
+</p><blockquote><tt>1470 REM SAVE A VALUE FROM V</tt>
+<br><tt>1480 IF V&gt;=0 THEN GOTO 1490</tt>
+<br><tt>1482 LET V=-1-V</tt>
+<br><tt>1484 GOSUB 1490</tt>
+<br><tt>1486 LET V=-1-V</tt>
+<br><tt>1488 RETURN</tt>
+<br><tt>1490 IF V&gt;V/2*2 THEN GOTO 1510</tt>
+<br><tt>1500 GOSUB 1520</tt>
+<br><tt>1502 LET V=V+V</tt>
+<br><tt>1504 RETURN</tt>
+<br><tt>1510 GOSUB 1520</tt>
+<br><tt>1512 LET V=V+V+1</tt>
+<br><tt>1514 RETURN</tt>
+<br><tt>1520 IF V=0 THEN GOTO 1550</tt>
+<br><tt>1522 LET V=V/2</tt>
+<br><tt>1524 GOTO 1490</tt>
+<br><tt>1550 REM GO ON TO USE V FOR OTHER THINGS</tt></blockquote>
+Note that this subroutine is designed to be placed in the path between
+the calling routine and some subroutine which re-uses the variable V. When
+the subroutine returns, it returns through the restoral part of this routine,
+which eventually returns to the main program with V restored. The subroutine
+which starts at line 1550 is assumed to be recursive, that is, it may call
+on itself through this save routine, so that any number of instances of
+V may be saved on the stack. The only requirement is that to return, it
+must first set V to 0 so that the restoral routine will function correctly.
+Alternatively wee could change line 1550 to jump to the start of the subroutine
+with a GOSUB:
+<blockquote><tt>1550 GOSUB . . .</tt>
+<br><tt>1552 LET V=0</tt>
+<br><tt>1554 RETURN</tt></blockquote>
+This requires another two bytes on the stack, but it removes the restriction
+on the exit conditions of the recursive subroutine.
+<p>If you expect to put a hundred or more numbers on the stack in this
+way you might consider packing them more tightly. If you use ten GOSUBs
+and divide by 10 instead of 2 the numbers will take one third the stack
+space. Divide by 41 and any number will fit in three GOSUBs, but the program
+gets rather long.
+<br>&nbsp;
+</p><h3>
+<a name="BigNum"></a>Bigger Numbers</h3>
+Sixteen bits is only good for integers 0-65535 or (-32768) to (+32767).
+This is fine for games and control applications, but sometimes we would
+like to handle fractional numbers (like dollars and cents) or very large
+range numbers as in scientific notation. Let's face it: regular BASIC has
+spoiled us. Granted. But if you could balance your checkbook in <font size="-1">TINY
+BASIC</font> you might not cringe so much when someone asks you what your
+computer is good for.
+<p>One common way to handle dollars and cents is to treat it as an integer
+number of cents. That would be OK if your balance never vwent over $327.67,
+but that seems a little unreasonable. Instead you can break it up into
+separate numbers for dollars and cents as in Chapter 5 in the first part
+of this book. This allows you balance to go up to $32,767.99 which is good
+enough for most of us. I will not dwell on this example here, but the idea
+can be extended. You can handle numbers as large as you like, putting up
+to four digits in each piece.
+</p><p>A similar technique may be used to do floating point arithmetic. The
+exponent part is held in one variable, say E. and the fractional part is
+held in one or more additional variables. In the following example we will
+use a four-digit fractional part in M, adding to it a number in F and N:
+</p><blockquote><tt>1000 REM FLOATING POINT ADD FOR TINY BASIC</tt>
+<br><tt>1010 IF E-4&gt;F THEN RETURN</tt>
+<br><tt>1020 IF N=0 THEN RETURN</tt>
+<br><tt>1030 IF E+4&lt;F THEN LET M=0</tt>
+<br><tt>1040 IF M=0 THEN LET E=F</tt>
+<br><tt>1050 IF E=F GOTO 1130</tt>
+<br><tt>1060 IF E&gt;F GOTO 1100</tt>
+<br><tt>1070 E=E+1</tt>
+<br><tt>1080 M=M/10</tt>
+<br><tt>1090 GOTO 1040</tt>
+<br><tt>1100 F=F+1</tt>
+<br><tt>1110 N=N/10</tt>
+<br><tt>1120 GOTO 1020</tt>
+<br><tt>1130 M=M+N</tt>
+<br><tt>1140 IF M=0 THEN E=0</tt>
+<br><tt>1150 IF M=0 RETURN</tt>
+<br><tt>1160 IF M&gt;9999 THEN GOTO 1230</tt>
+<br><tt>1170 IF M&gt;999 RETURN</tt>
+<br><tt>1180 IF M&lt;-9999 THEN GOTO 1230</tt>
+<br><tt>1190 IF M&lt;-999 RETURN</tt>
+<br><tt>1200 M=M*10</tt>
+<br><tt>1210 E=E-1</tt>
+<br><tt>1220 GOTO 1170</tt>
+<br><tt>1230 E=E+1</tt>
+<br><tt>1240 M=M/10</tt>
+<br><tt>1250 RETURN</tt></blockquote>
+This subroutine uses decimal normalization; by changing the divisors and
+multipliers appropriately, it can be made into a binary, hexadecimal, or
+even ternary floating point machine. By using the multiple precision techniques
+described in the checkbook balancing example, greater precision can be
+obtained in the fractional part.
+<br>&nbsp;
+<h3>
+<a name="GOTO"></a>Computed GOTO</h3>
+One of the more povmrful features of <font size="-1">TINY BASIC</font> is
+the computed line address for GOTO and GOSUB statements. I once saw a <font size="-1">TINY
+BASIC</font> program which had several large blocks of the program devoted
+to sequences of IF statements of the form,
+<blockquote><tt>110 IF A=1 GOTO 1000</tt>
+<br><tt>120 IF A=2 GOTO 2000</tt>
+<br><tt>130 IF A=3 GOTO 3000</tt>
+<br><tt>140 IF A=4 GOTO 4000</tt>
+<br><tt>150 GOTO 100</tt></blockquote>
+Now there-is nothing wrong with this form of program, but I'm too lazy
+to type all that, and besides, I could not get his whole program into my
+memory. Instead of lines 110 to 140 above, the single line
+<blockquote><tt>125 IF A&gt;0 IF A&lt;5 GOTO A*1000</tt></blockquote>
+does exactly the same thing in less memory, and probably faster.
+<p>Another part of this program simulated a card game, in which the internal
+numbers, 11-14 were recognized (using the same kind of sequence of IFs)
+in three different places, and for each different number, the name of the
+corresponding face card was printed. The thing that caught my attention
+was that the same sequence of IFs, PRINTs, and GOTOs was repeated three
+different places in the program.
+</p><p>Now I'm glad this person enjoys using <font size="-1">TINY BASIC</font>,
+and that he likes to type in large programs to fill his voluminous memory;
+but as I said, I'm lazy, and I would rather type in one set of subroutines:
+</p><blockquote><tt>10110 PRINT "JACK"</tt>
+<br><tt>10115 RETURN</tt>
+<br><tt>10120 PRINT "QUEEN"</tt>
+<br><tt>10125 RETURN</tt>
+<br><tt>10130 PRINT "KING"</tt>
+<br><tt>10135 RETURN</tt>
+<br><tt>10140 PRINT "ACE"</tt>
+<br><tt>10145 RETURN</tt></blockquote>
+then in each of the three places where this is to be printed, use the simple
+formula:
+<blockquote><tt>2510 GOSUB 10000+B*10</tt></blockquote>
+Along the same line, when memory gets tight, you may be able to save a
+few bytes with a similar techneque. Suppose your program has thirteen "GO
+TO 1234" statements in it. If you had an unused varlable (say, U) you can,
+in the direct execution mode, assign it the value 1234 (i.e. the line number
+all those GOTOs go to), then replace each "GO TO 1234" with a "GOTOU",
+squeezing out the extra spaces (<font size="-1">TINY</font> ignores them
+anyway). This will save some thirty or forty bytes, and it will probably
+run faster also.
+<br>&nbsp;
+<h3>
+<a name="Speed"></a>Execution Speed</h3>
+<font size="-1">TINY BASIC</font> is actually quite slow in running programs.
+That is one of the hazards of a two-level interpreter approach to a language
+processor. But there are some ways to affect the execution speed. One of
+these is to use the keyword "LET" in your assignment statements. <font size="-1">TINY
+BASIC</font> will accept either of the following two forms of the assignment
+statement and do the same thing,
+<blockquote><tt>R=2+3</tt>
+<br><tt>LET R=2+3</tt></blockquote>
+But the second form will execute much faster because it is unnecessary
+for the interpreter first to ascertain that it is not a REM, RUN, or RETURN
+statement. In fact, the LET keyword is the first tested, so it becomes
+the fastest-executing statement, whereas the other form must be tested
+against all 17 keywords before it is assumed to be an assignment statement.
+<p>Another way to speed up a program depends on the fact that constant
+numbers are converted to binary each time they are used, while variables
+are fetched and used directly with no conversion. If you use the same constant
+over and over and you do not otherwise use all the variables, assigning
+that number to one of the spare variables will make the program both shorter
+and faster. You can even make the assignment in an unnumbered line; the
+variables keep their values until explicitly changed.
+</p><p>Finally it should be noted that GOTOs, GOSUBs and RETURNS always search
+the program from the beginning for their respective line numbers. Put the
+speed-sensitive part of the program near the front, and the infrequently
+used routines (setup, error messages, and the like) at the end. This way
+the GOTOs have fewer line numbers to wade through, so they will run faster.
+</p><p>As we have seen, there is not much that <font size="-1">TINY BASIC</font>
+cannot do (except maybe go fast). Sure, it is somewhat tedious to write
+all that extra code to get bigger numbers or strings or arrays, but you
+can always code up subroutines which can be used in several different programs
+(like the floating point add, lines 1000-1250), then save them off on cassette.
+</p><p>Remember, your computer (with <font size="-1">TINY BASIC</font> in it)
+is limited only by your imagination.
+</p></body></html>
